@@ -97,9 +97,10 @@ export default function App() {
         finalReport: null,
         scenario: null,
         evac: { status: 'none', route: [], hazards: [], distanceLeft: 100, journeyLog: [] },
-        // ▼ これを追記
-        returnETAs: {},   // { "配偶者": 3, ... } / サーバから降ってくる
-        splitPlans: {},   // { "配偶者": "near_shelter" }
+        returnETAs: {},
+        splitPlans: {},
+        currentFloor: 1,
+        contactedFamily: {},
     });
 
     const [input, setInput] = useState('');
@@ -210,10 +211,14 @@ export default function App() {
         .map(name => {
             const eta = state.returnETAs?.[name];
             const plan = state.splitPlans?.[name];
-            // plan が near_shelter なら「近隣避難所へ」、そうでなければ T-残りターン を表示
+            const location = (Object.fromEntries((state.familyLocations || []).map(x => [x.name, x.location]))[name]) || 'unknown';
+            const contacted = state.contactedFamily?.[name] || false;
+            
+            const showETA = location === 'away' || contacted;
+            
             const tail = plan === 'near_shelter'
                 ? '（近隣避難所へ）'
-                : (typeof eta === 'number' ? `（T-${eta}）` : '（T-?）');
+                : showETA && typeof eta === 'number' ? `（T-${eta}）` : '（T-?）';
             return `${name}${tail}`;
         });
 
@@ -239,6 +244,12 @@ export default function App() {
             {evacLabel}
         </Badge>
     );
+    
+    const floorBadge = state.evac?.status === 'none' ? (
+        <Badge color="blue">
+            現在: {state.currentFloor}階
+        </Badge>
+    ) : null;
 
     // JMA バッジカラー関数を先に追加（Badge群の上に）
     const jmaColor = (name) => {
@@ -376,6 +387,7 @@ export default function App() {
                 {familyBadge}
                 {timeBadge}
                 {evacBadge}
+                {floorBadge}
                 {etaBadge}
             </div>
 
