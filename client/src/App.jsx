@@ -240,19 +240,29 @@ export default function App() {
         </Badge>
     );
 
+    // JMA バッジカラー関数を先に追加（Badge群の上に）
+    const jmaColor = (name) => {
+        if (!name) return 'gray';
+        if (name.includes('特別警報')) return 'red';
+        if (name.includes('警報')) return 'orange';
+        if (name.includes('注意報')) return 'yellow';
+        return 'gray';
+    };
+
+    // --- JMAバッジ ---
     const jmaBadges = [
         ...(state.jma?.special || []).map((n) => (
-            <Badge key={`sp-${n}`} color="red">
+            <Badge key={`sp-${n}`} color={jmaColor(n)}>
                 {n}
             </Badge>
         )),
         ...(state.jma?.warnings || []).map((n) => (
-            <Badge key={`wn-${n}`} color="orange">
+            <Badge key={`wn-${n}`} color={jmaColor(n)}>
                 {n}
             </Badge>
         )),
         ...(state.jma?.advisories || []).map((n) => (
-            <Badge key={`ad-${n}`} color="yellow">
+            <Badge key={`ad-${n}`} color={jmaColor(n)}>
                 {n}
             </Badge>
         )),
