@@ -298,19 +298,6 @@ function applySafetyRules(prev = {}, proposed = {}) {
   const currentWarnings = jma.warnings || [];
   const currentAdvisories = jma.advisories || [];
 
-  // 各系列の候補群（同系列内は上書きルール）
-  const RAIN_SERIES = ['大雨注意報', '大雨警報', '大雨特別警報'];
-  const WIND_SERIES = ['強風注意報', '暴風警報', '暴風特別警報'];
-  const FLOOD_SERIES = ['洪水注意報', '洪水警報'];
-  const WAVE_SERIES = ['波浪注意報', '波浪警報'];
-  const TIDE_SERIES = ['高潮注意報', '高潮警報', '高潮特別警報'];
-
-  // 同系列の下位を削除して上位だけ残す関数
-  const upgradeSeries = (base, series, level) => {
-    const lowerRemoved = base.filter((n) => !series.includes(n));
-    if (level) lowerRemoved.push(level);
-    return lowerRemoved;
-  };
 
   // レベル決定ロジック
   let newRain = null;
@@ -346,11 +333,6 @@ function applySafetyRules(prev = {}, proposed = {}) {
 
   let newTide = null;
   if (Math.random() < 0.4 && t >= 4) newTide = (t >= 6 ? '高潮警報' : '高潮注意報');
-
-  // --- 上書き更新 ---
-  s.jma.advisories = upgradeSeries(currentAdvisories, RAIN_SERIES, null);
-  s.jma.warnings = upgradeSeries(currentWarnings, RAIN_SERIES, null);
-  s.jma.special = upgradeSeries(currentSpecials, RAIN_SERIES, null);
 
   // === 各シリーズ最低2ターン維持 ===
   s._jmaPrev = s._jmaPrev || {}; // 各系列のレベル記録
@@ -388,6 +370,32 @@ function applySafetyRules(prev = {}, proposed = {}) {
     }
   };
 
+  const clearSeries = (series) => {
+    s.jma.advisories = (s.jma.advisories || []).filter(n => !series.includes(n));
+    s.jma.warnings = (s.jma.warnings || []).filter(n => !series.includes(n));
+    s.jma.special = (s.jma.special || []).filter(n => !series.includes(n));
+  };
+
+  const applyWarning = (newLevel, series) => {
+    if (!newLevel || newLevel === 'なし') {
+      clearSeries(series);
+      return;
+    }
+    
+    clearSeries(series);
+    
+    const rank = levelRank(newLevel);
+    if (rank === 1) s.jma.advisories.push(newLevel);
+    else if (rank === 2) s.jma.warnings.push(newLevel);
+    else if (rank === 3) s.jma.special.push(newLevel);
+  };
+
+  applyWarning(newRain, SERIES.RAIN);
+  applyWarning(newWind, SERIES.WIND);
+  applyWarning(newFlood, SERIES.FLOOD);
+  applyWarning(newWave, SERIES.WAVE);
+  applyWarning(newTide, SERIES.TIDE);
+
   const ensureSeriesHold = (key, series) => {
     const cur = seriesCurrentLevel(series);
     const prev = s._jmaPrev[key] ?? 0;
@@ -395,14 +403,10 @@ function applySafetyRules(prev = {}, proposed = {}) {
 
     if (cur.rank > prev) {
       s._jmaPrev[key] = cur.rank;
-      s._jmaHold[key] = 2; // 最低2ターン維持
+      s._jmaHold[key] = 2;
     } else if (cur.rank < prev && hold > 0) {
-      // ダウングレード禁止（前の階層を維持）
       const targetName = series.find((n) => levelRank(n) === prev);
-      const removeSeries = (arr) => (arr || []).filter((n) => !series.includes(n));
-      s.jma.advisories = removeSeries(s.jma.advisories);
-      s.jma.warnings = removeSeries(s.jma.warnings);
-      s.jma.special = removeSeries(s.jma.special);
+      clearSeries(series);
 
       if (prev === 1) s.jma.advisories.push(targetName);
       if (prev === 2) s.jma.warnings.push(targetName);
@@ -432,36 +436,10 @@ function applySafetyRules(prev = {}, proposed = {}) {
     s.landslide.risk = 'medium';
   }
 
-  if (newRain === '大雨注意報') s.jma.advisories = upgradeSeries(s.jma.advisories, RAIN_SERIES, '大雨注意報');
-  if (newRain === '大雨警報') s.jma.warnings = upgradeSeries(s.jma.warnings, RAIN_SERIES, '大雨警報');
-  if (newRain === '大雨特別警報') s.jma.special = upgradeSeries(s.jma.special, RAIN_SERIES, '大雨特別警報');
-
   // --- 現在のJMA状態を判定 ---
   const hasAdvisories = Array.isArray(s.jma?.advisories) && s.jma.advisories.length > 0;
   const hasWarnings = Array.isArray(s.jma?.warnings) && s.jma.warnings.length > 0;
   const hasSpecial = Array.isArray(s.jma?.special) && s.jma.special.length > 0;
-
-  // 他系列は上書き対象を限定
-  const applyCoexist = (targetArr, newLevel, series) => {
-    if (!newLevel || newLevel === 'なし') return targetArr;
-    return upgradeSeries(targetArr, series, newLevel);
-  };
-  s.jma.advisories = applyCoexist(s.jma.advisories, newWind === '強風注意報' ? newWind : null, WIND_SERIES);
-  s.jma.warnings = applyCoexist(s.jma.warnings, newWind === '暴風警報' ? newWind : null, WIND_SERIES);
-  s.jma.special = applyCoexist(s.jma.special, newWind === '暴風特別警報' ? newWind : null, WIND_SERIES);
-  s.jma.warnings = applyCoexist(s.jma.warnings, newFlood === '洪水警報' ? newFlood : null, FLOOD_SERIES);
-  s.jma.advisories = applyCoexist(s.jma.advisories, newFlood === '洪水注意報' ? newFlood : null, FLOOD_SERIES);
-  s.jma.warnings = applyCoexist(s.jma.warnings, newWave === '波浪警報' ? newWave : null, WAVE_SERIES);
-  s.jma.advisories = applyCoexist(s.jma.advisories, newWave === '波浪注意報' ? newWave : null, WAVE_SERIES);
-  s.jma.advisories = applyCoexist(s.jma.advisories, newTide === '高潮注意報' ? newTide : null, TIDE_SERIES);
-  s.jma.warnings = applyCoexist(s.jma.warnings, newTide === '高潮警報' ? newTide : null, TIDE_SERIES);
-  s.jma.special = applyCoexist(s.jma.special, newTide === '高潮特別警報' ? newTide : null, TIDE_SERIES);
-
-  // 重複削除
-  const uniq = (arr) => Array.from(new Set(arr.filter(Boolean)));
-  s.jma.special = uniq(s.jma.special);
-  s.jma.warnings = uniq(s.jma.warnings);
-  s.jma.advisories = uniq(s.jma.advisories);
 
   // === 行動段階の自動追従（最後に移動） ===
   // ・警報が1つでも出たら「高齢者等避難」
