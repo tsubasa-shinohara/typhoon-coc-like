@@ -242,7 +242,7 @@ export default function App() {
     const familyBadge = (
         <Badge color="blue">
             家族: 合計{roster.length}
-            （在宅{counts.home + counts.en_route}・外出{counts.away}・不明{counts.unknown}・到着{counts.arrived}）
+            （在宅{counts.home}・避難中{counts.en_route}・外出{counts.away}・不明{counts.unknown}・到着{counts.arrived}）
             {awayNames.length > 0 ? ` ／外出: ${awayNames.join('、')}` : ''}
             {unknownNames.length > 0 ? ` ／不明: ${unknownNames.join('、')}` : ''}
         </Badge>
