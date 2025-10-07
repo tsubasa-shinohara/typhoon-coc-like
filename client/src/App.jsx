@@ -101,6 +101,7 @@ export default function App() {
         splitPlans: {},
         currentFloor: 1,
         contactedFamily: {},
+        _choices: null,
     });
 
     const [input, setInput] = useState('');
@@ -124,21 +125,25 @@ export default function App() {
     }, [scenario]);
 
     // ④ 送信
-    const send = async () => {
+    const send = async (contentOverride) => {
         const r = autoRoll ? roll() : null;
-        const userMsg = { role: 'user', content: input || '（無言）' };
+        const content = (contentOverride ?? input)?.trim() || '（無言）';
+
+        const userMsg = { role: 'user', content };
         const newMessages = [...messages, userMsg];
         setMessages(newMessages);
-        setInput('');
+        setInput('');                   // 入力欄は空にする
+        setState(s => ({ ...s, _choices: null }));  // 送信したら選択肢は一旦消す
+
         try {
             const res = await axios.post('http://localhost:8787/api/facilitator', {
                 messages: newMessages,
                 lastRoll: r,
                 state: { ...state, scenario },
             });
-            const { text, newState } = res.data;
+            const { text, newState, choices } = res.data;
             setMessages((m) => [...m, { role: 'assistant', content: text }]);
-            if (newState) setState(newState);
+            if (newState) setState((s) => ({ ...newState, _choices: choices || null }));
         } catch (e) {
             setMessages((m) => [...m, { role: 'assistant', content: '（サーバに接続できませんでした）' }]);
         } finally {
@@ -213,9 +218,9 @@ export default function App() {
             const plan = state.splitPlans?.[name];
             const location = (Object.fromEntries((state.familyLocations || []).map(x => [x.name, x.location]))[name]) || 'unknown';
             const contacted = state.contactedFamily?.[name] || false;
-            
+
             const showETA = location === 'away' || contacted;
-            
+
             const tail = plan === 'near_shelter'
                 ? '（近隣避難所へ）'
                 : showETA && typeof eta === 'number' ? `（T-${eta}）` : '（T-?）';
@@ -336,6 +341,13 @@ export default function App() {
                     <Badge color="blue">{`Composure: ${r.scores.composure}`}</Badge>
                 </div>
 
+                {r.personality && (
+                    <div style={{ padding: 14, border: '1px solid #ddd', borderRadius: 10, background: '#fff', marginTop: 12 }}>
+                        <h3 style={{ marginTop: 0 }}>タイプ診断：{r.personality.label}</h3>
+                        <p style={{ margin: 0, color: '#333' }}>{r.personality.blurb}</p>
+                    </div>
+                )}
+
                 <div style={{ padding: 14, border: '1px solid #ddd', borderRadius: 10, background: '#fff' }}>
                     <h3 style={{ marginTop: 0 }}>フィードバック</h3>
                     <ul style={{ marginTop: 8 }}>
@@ -394,6 +406,23 @@ export default function App() {
                 {state.phase === 'clearing' && <Badge color="blue">警戒解除フェーズ（次で終了）</Badge>}
             </div>
 
+            {/* スコアゲージ */}
+            <div style={{ display: 'flex', gap: 10, alignItems: 'center', margin: '8px 0 12px' }}>
+                {['safety', 'compassion', 'composure'].map((k) => {
+                    const v = state.scores?.[k] ?? 0; // -∞〜+∞ / 見た目は -5〜+5 でクリップ
+                    const pct = Math.max(0, Math.min(100, ((v + 5) / 10) * 100));
+                    const label = { safety: 'Safety', compassion: 'Compassion', composure: 'Composure' }[k];
+                    return (
+                        <div key={k} style={{ flex: 1 }}>
+                            <div style={{ fontSize: 12, marginBottom: 4, color: '#555' }}>{label}</div>
+                            <div style={{ height: 8, background: '#eee', borderRadius: 8, overflow: 'hidden' }}>
+                                <div style={{ width: `${pct}%`, height: '100%', background: '#8ABEF5' }} />
+                            </div>
+                        </div>
+                    );
+                })}
+            </div>
+
             {/* ログ */}
             <div
                 ref={logRef}
@@ -416,6 +445,22 @@ export default function App() {
                     </div>
                 ))}
             </div>
+
+            {/* 選択肢パネル（AIが返したら表示） */}
+            {Array.isArray(state._choices) && state._choices.length > 0 && (
+                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', margin: '8px 0' }}>
+                    {state._choices.map((c, i) => (
+                        <button
+                            key={i}
+                            onClick={() => send(c)}  // ← ここを一行だけ変更
+                            style={{ padding: '8px 12px', borderRadius: 8, border: '1px solid #ccc', background: '#fff' }}
+                            title="クリックで送信"
+                        >
+                            {c}
+                        </button>
+                    ))}
+                </div>
+            )}
 
             {/* 入力 */}
             <div style={{ marginTop: 8, display: 'flex', gap: 8 }}>

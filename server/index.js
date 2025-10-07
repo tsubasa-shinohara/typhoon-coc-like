@@ -78,15 +78,15 @@ function applySafetyRules(prev = {}, proposed = {}) {
   if (typeof u.alertReceived === 'boolean') s.alertReceived = u.alertReceived;
   if (typeof u.alertType === 'string') s.alertType = u.alertType;
   if (typeof u.currentFloor === 'number') s.currentFloor = u.currentFloor;
-  
+
   // 初期化: プレイヤーの現在階（デフォルト1階）
   if (!s.currentFloor) s.currentFloor = 1;
-  
+
   // 階数制約の検証
   const maxFloors = prev.scenario?.house?.floors || 2;
   if (s.currentFloor < 1) s.currentFloor = 1;
   if (s.currentFloor > maxFloors) s.currentFloor = maxFloors;
-  
+
   // AI出力の階数制約違反を防ぐ
   if (u.currentFloor && u.currentFloor > maxFloors) {
     s.currentFloor = maxFloors;
@@ -131,7 +131,7 @@ function applySafetyRules(prev = {}, proposed = {}) {
   if (u.returnETAs && typeof u.returnETAs === 'object') {
     s.returnETAs = { ...(s.returnETAs || {}), ...u.returnETAs };
   }
-  
+
   // 連絡済み家族の追跡
   if (!s.contactedFamily) s.contactedFamily = {};
 
@@ -201,14 +201,14 @@ function applySafetyRules(prev = {}, proposed = {}) {
     s.evac.evacuationStartTurn = s.turn;
     s.evac.turnsElapsed = 0;
     s.evac.turnsRequired = 2;
-    
+
     const lastAction = prev._lastAction || '';
     const neighborKeywords = ['声をかけ', '呼びかけ', '周囲', '近所', '周りに', '隣人'];
     const calledOutToNeighbors = neighborKeywords.some(k => lastAction.includes(k));
     if (calledOutToNeighbors) {
       s._neighborCalloutBonus = { compassion: 2, safety: 1 };
     }
-    
+
     s.familyLocations = (s.familyLocations || []).map(x => ({
       ...x,
       location: x.location === 'home' ? 'en_route' : x.location,
@@ -217,16 +217,16 @@ function applySafetyRules(prev = {}, proposed = {}) {
 
   if (s.evac.status === 'en_route') {
     s.evac.turnsElapsed = s.turn - s.evac.evacuationStartTurn;
-    
+
     const lastAction = prev._lastAction || '';
-    const hasKittenKeyword = (lastAction.includes('子猫') || lastAction.includes('猫')) && 
-                              (lastAction.includes('助ける') || lastAction.includes('救う') || lastAction.includes('保護'));
+    const hasKittenKeyword = (lastAction.includes('子猫') || lastAction.includes('猫')) &&
+      (lastAction.includes('助ける') || lastAction.includes('救う') || lastAction.includes('保護'));
     if (hasKittenKeyword && !s.evac.hasKittenEvent) {
       s.evac.hasKittenEvent = true;
       s.evac.turnsRequired += 1;
       s.evac.journeyLog.push({ turn: s.turn, text: '子猫を助けたため、避難に1ターン余分にかかります。' });
     }
-    
+
     if (!s.evac.hasFloodEvent && Math.random() < 0.25) {
       s.evac.hasFloodEvent = true;
       s.evac.turnsRequired += 1;
@@ -300,13 +300,13 @@ function applySafetyRules(prev = {}, proposed = {}) {
       }
     }
   }
-  
+
   // === 家族への連絡検知 ===
   // lastAction（ユーザーのメッセージ）から家族への連絡を検知
   const lastAction = prev._lastAction || '';
   const contactKeywords = ['確認', '連絡', '電話', '安否', '状況', '様子'];
   const hasContactKeyword = contactKeywords.some(k => lastAction.includes(k));
-  
+
   if (hasContactKeyword) {
     // 家族名簿の各メンバーをチェック
     (prev.scenario?.family || []).forEach(member => {
@@ -317,10 +317,10 @@ function applySafetyRules(prev = {}, proposed = {}) {
       }
     });
   }
-  
+
   // lastActionを保存（次ターンで使用）
   s._lastAction = lastAction;
-  
+
   // === 台風通過（自然終了）判定 ===
   // 「なし / 情報なし / 未定義」を広く"静穏"とみなすヘルパー
   const isNone = (v) => v == null || v === 'なし' || v === '情報なし';
@@ -441,9 +441,9 @@ function applySafetyRules(prev = {}, proposed = {}) {
       clearSeries(series);
       return;
     }
-    
+
     clearSeries(series);
-    
+
     const rank = levelRank(newLevel);
     if (rank === 1) s.jma.advisories.push(newLevel);
     else if (rank === 2) s.jma.warnings.push(newLevel);
@@ -552,7 +552,7 @@ function applySafetyRules(prev = {}, proposed = {}) {
   if (!s.disasterOccurred && s.evacuationInfo === '緊急安全確保') {
     let shouldTriggerDisaster = false;
     let disasterReason = '';
-    
+
     // シナリオ1: 避難中に緊急安全確保
     if (s.evac?.status === 'en_route') {
       if (Math.random() < 0.65) {
@@ -560,7 +560,7 @@ function applySafetyRules(prev = {}, proposed = {}) {
         disasterReason = '避難が間に合わず、避難経路で被災しました。緊急安全確保の発令が遅すぎました。';
       }
     }
-    
+
     // シナリオ2: 崖付近でない + 1階待機中 + 緊急安全確保
     const isNearCliff = (prev.scenario?.house?.area || '').includes('山裾・斜面近く');
     if (!shouldTriggerDisaster && s.evac?.status === 'none' && !isNearCliff && s.currentFloor === 1) {
@@ -570,7 +570,7 @@ function applySafetyRules(prev = {}, proposed = {}) {
       }
     }
   }
-  
+
   // シナリオ3: 崖付近 + 自宅待機中 + 土砂災害警戒情報
   if (!s.disasterOccurred && s.evac?.status === 'none') {
     const isNearCliff = (prev.scenario?.house?.area || '').includes('山裾・斜面近く');
@@ -580,7 +580,7 @@ function applySafetyRules(prev = {}, proposed = {}) {
         let disasterReason = '';
         shouldTriggerDisaster = true;
         disasterReason = '土砂災害警戒情報発令中、斜面付近の自宅で待機していたため土砂崩れに巻き込まれました。早期避難が必要でした。';
-        
+
         // 被災が発生した場合
         if (shouldTriggerDisaster) {
           s.disasterOccurred = true;
@@ -592,7 +592,7 @@ function applySafetyRules(prev = {}, proposed = {}) {
             safetyScore: 0,
             turnEnded: s.turn,
           };
-          
+
           // 家族全員の状態を更新
           s.familyLocations = (s.familyLocations || []).map(f => ({
             ...f,
@@ -675,6 +675,7 @@ const SYSTEM = `
 返却形式:
 {
   "narration": "30〜120字。音・匂い・光、家族の表情、建物のきしみ、携帯の振動など。助言や結論は禁止。",
+  "choices": ["短い行動案1","短い行動案2","短い行動案3"], // 省略禁止：毎ターン必ず3件。傾向は「安全優先」「共助優先」「情報確認」を混在
   "updates": {
     "powerOutage": true/false,
     "floodLevel": "none|road|house_1f|house_2f",
@@ -741,6 +742,11 @@ const SYSTEM = `
 - 5ターン目以降：特別警報を出すか、徐々に解除（警報→注意報→なし）に移行。
 - updates.jma は毎ターンの状況変化を表すため、配列の中身はランダムでも構わない。
 - 完全に静かなターン（全てなし）は、10%未満の確率でのみ許可する。
+- ユーザーが無言でも、必ず "choices" に 3 件の行動案を返すこと（省略禁止）。
+- choices は 8〜20 文字程度の日本語・即時行動の命令形で、トーンはドラマチック。
+  例：「祖母の手を取り二階へ」「子を先に避難路へ走らせる」「窓を離れ灯りを落とす」
+- 3件の傾向は毎ターン「安全優先」「共助優先」「情報確認」を混在させる（順不同）。
+- 直前のユーザー発言（または選択肢）を反映し、"updates" に矛盾しない状態変化を必ず一つ以上含める。
 `;
 
 // ---------- API ----------
@@ -782,6 +788,23 @@ app.post('/api/facilitator', async (req, res) => {
 
     const narration = data?.narration || '（描写が生成できませんでした）';
     const updates = data?.updates || {};
+    let choices = Array.isArray(data?.choices) ? data.choices.slice(0, 3) : null;
+
+    // narr が失敗したときのフォールバック（無言ターン対策）
+    let safeNarr = narration;
+    if (!safeNarr || safeNarr.includes('生成できません')) {
+      safeNarr = '風がうなり、家は小さく軋む。暗がりの中、鼓動が早まる。';
+    }
+
+    // choices のフォールバック（必ず3件）
+    if (!choices || choices.length < 3) {
+      const evac = (state?.evac?.status) || 'none';
+      choices = (evac === 'en_route')
+        ? ['足元を照らし静かに進む', '冠水路を避けて回り込む', '一旦立ち止まり状況確認']
+        : ['祖母の手を取り二階へ', '子を先に避難路へ走らせる', '最新の警報を確認する'];
+    }
+
+    res.json({ text: safeNarr, choices, newState: { ...next, finalReport } });
 
     // lastAction を state に保存（家族連絡検知用）
     const lastAction = messages?.slice(-1)?.[0]?.content || '';
@@ -799,7 +822,7 @@ app.post('/api/facilitator', async (req, res) => {
       compassion: (next.scores?.compassion || 0) + (d.compassion || 0) + (neighborBonus.compassion || 0),
       composure: (next.scores?.composure || 0) + (d.composure || 0),
     };
-    
+
     if (next._neighborCalloutBonus) {
       delete next._neighborCalloutBonus;
     }
@@ -818,7 +841,7 @@ app.post('/api/facilitator', async (req, res) => {
       finalReport = buildFinalReport(next);
     }
 
-    res.json({ text: narration, newState: { ...next, finalReport } });
+    res.json({ text: narration, choices, newState: { ...next, finalReport } });
   } catch (e) {
     console.error('[AI ERROR]', e?.message || e);
     res.status(500).json({ error: 'AI応答エラー', detail: e?.message || String(e) });
@@ -830,6 +853,18 @@ function buildFinalReport(s) {
   const { safety = 0, compassion = 0, composure = 0 } = s.scores || {};
   const scoreTag = (v) => (v >= 3 ? '◎' : v >= 1 ? '○' : v <= -3 ? '×' : v <= -1 ? '△' : '–');
 
+  // === タイプ診断 ===
+  const personality = (() => {
+    const axes = { safety, compassion, composure };
+    // 重み付けは最小構成（必要なら後で細かく）
+    const top = Object.entries(axes).sort((a, b) => b[1] - a[1])[0]?.[0] || 'safety';
+    if (axes.compasion >= 3 && axes.composure >= 2) return { key: 'guardian', label: '共感型ガーディアン', blurb: '人を思いやり、混乱の中でも落ち着きを保てるタイプ。声かけと分散避難の判断が光ります。' };
+    if (top === 'safety' && safety >= 3) return { key: 'decider', label: '迅速判断型', blurb: 'リスクを素早く捉え、早めの避難や垂直移動を決断できます。' };
+    if (top === 'compassion' && compassion >= 3) return { key: 'empath', label: '共感型リーダー', blurb: '近所や家族へ配慮を忘れません。声かけ・見守りの力で被害を減らせます。' };
+    if (top === 'composure' && composure >= 3) return { key: 'analyst', label: '情報分析型', blurb: '警報・気象・河川情報を冷静に読み、根拠ある判断ができます。' };
+    return { key: 'balanced', label: 'バランス型', blurb: '安全・思いやり・冷静さのバランスが取れています。状況に応じて役割を切替できる素質あり。' };
+  })();
+
   const keyMoments = s.story?.slice(0, 3).map((m) => `・T${m.turn}：${m.narration}`) || [];
   const lastMoments = s.story?.slice(-2).map((m) => `・T${m.turn}：${m.narration}`) || [];
 
@@ -838,8 +873,7 @@ function buildFinalReport(s) {
     : [];
   const evacLine =
     s.evac?.status === 'arrived'
-      ? `避難先「${s.evac?.shelterName || '避難所'}」に到着。経路: ${(s.evac?.route || []).join('→') || '—'
-      }`
+      ? `避難先「${s.evac?.shelterName || '避難所'}」に到着。経路: ${(s.evac?.route || []).join('→') || '—'}`
       : s.evac?.status === 'aborted'
         ? `避難は断念。理由: ${(s.evac?.hazards || []).join('、') || '状況悪化'}`
         : `避難は未完了（status: ${s.evac?.status || 'none'}）`;
@@ -860,6 +894,7 @@ function buildFinalReport(s) {
     headline: s.jma?.special?.length ? '嵐の只中で' : '荒天の夜をこえて',
     summaryBullets: [...keyMoments, '…', ...lastMoments, evacLine, ...journey.slice(-3)],
     scores: { safety, compassion, composure },
+    personality, // ← 追加
     advice,
   };
 }
