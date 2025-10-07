@@ -316,12 +316,26 @@ function applySafetyRules(prev = {}, proposed = {}) {
   let newRain = null;
   if (t <= 2) newRain = '大雨注意報';
   else if (t <= 4) newRain = '大雨警報';
-  else if (t >= 5) newRain = Math.random() < 0.9 ? '大雨特別警報' : '大雨警報';
+  else if (t >= 5) {
+    const rainWarnDuration = s._warnDuration?.RAIN || 0;
+    if (rainWarnDuration >= 2) {
+      newRain = Math.random() < 0.9 ? '大雨特別警報' : '大雨警報';
+    } else {
+      newRain = '大雨警報';
+    }
+  }
 
   let newWind = null;
   if (t <= 2) newWind = '強風注意報';
   else if (t <= 4) newWind = '暴風警報';
-  else if (t >= 5) newWind = Math.random() < 0.8 ? '暴風特別警報' : '暴風警報';
+  else if (t >= 5) {
+    const windWarnDuration = s._warnDuration?.WIND || 0;
+    if (windWarnDuration >= 2) {
+      newWind = Math.random() < 0.8 ? '暴風特別警報' : '暴風警報';
+    } else {
+      newWind = '暴風警報';
+    }
+  }
 
   let newFlood = null;
   if (t >= 3 && t <= 5) newFlood = '洪水警報';
@@ -341,6 +355,7 @@ function applySafetyRules(prev = {}, proposed = {}) {
   // === 各シリーズ最低2ターン維持 ===
   s._jmaPrev = s._jmaPrev || {}; // 各系列のレベル記録
   s._jmaHold = s._jmaHold || {}; // ホールド残ターン数
+  s._warnDuration = s._warnDuration || {}; // 警報レベル継続ターン数
 
   const SERIES = {
     RAIN: ['大雨注意報', '大雨警報', '大雨特別警報'],
@@ -362,6 +377,15 @@ function applySafetyRules(prev = {}, proposed = {}) {
     const all = [...(s.jma.advisories || []), ...(s.jma.warnings || []), ...(s.jma.special || [])];
     const hit = all.find((n) => series.includes(n));
     return { name: hit || null, rank: levelRank(hit) };
+  };
+
+  const updateWarnDuration = (key, series) => {
+    const cur = seriesCurrentLevel(series);
+    if (cur.rank >= 2) {
+      s._warnDuration[key] = (s._warnDuration[key] || 0) + 1;
+    } else {
+      s._warnDuration[key] = 0;
+    }
   };
 
   const ensureSeriesHold = (key, series) => {
@@ -392,7 +416,10 @@ function applySafetyRules(prev = {}, proposed = {}) {
     s._jmaPrev[key] = cur.rank;
   };
 
-  Object.keys(SERIES).forEach((k) => ensureSeriesHold(k, SERIES[k]));
+  Object.keys(SERIES).forEach((k) => {
+    updateWarnDuration(k, SERIES[k]);
+    ensureSeriesHold(k, SERIES[k]);
+  });
 
   // === 大雨警報＋洪水警報 2ターン継続で 土砂災害警戒情報 ===
   s._rf2 = s._rf2 || 0;
@@ -420,10 +447,15 @@ function applySafetyRules(prev = {}, proposed = {}) {
     return upgradeSeries(targetArr, series, newLevel);
   };
   s.jma.advisories = applyCoexist(s.jma.advisories, newWind === '強風注意報' ? newWind : null, WIND_SERIES);
-  s.jma.warnings = applyCoexist(s.jma.warnings, ['暴風警報', '暴風特別警報'].includes(newWind) ? newWind : null, WIND_SERIES);
-  s.jma.warnings = applyCoexist(s.jma.warnings, newFlood, FLOOD_SERIES);
-  s.jma.warnings = applyCoexist(s.jma.warnings, newWave, WAVE_SERIES);
-  s.jma.warnings = applyCoexist(s.jma.warnings, newTide, TIDE_SERIES);
+  s.jma.warnings = applyCoexist(s.jma.warnings, newWind === '暴風警報' ? newWind : null, WIND_SERIES);
+  s.jma.special = applyCoexist(s.jma.special, newWind === '暴風特別警報' ? newWind : null, WIND_SERIES);
+  s.jma.warnings = applyCoexist(s.jma.warnings, newFlood === '洪水警報' ? newFlood : null, FLOOD_SERIES);
+  s.jma.advisories = applyCoexist(s.jma.advisories, newFlood === '洪水注意報' ? newFlood : null, FLOOD_SERIES);
+  s.jma.warnings = applyCoexist(s.jma.warnings, newWave === '波浪警報' ? newWave : null, WAVE_SERIES);
+  s.jma.advisories = applyCoexist(s.jma.advisories, newWave === '波浪注意報' ? newWave : null, WAVE_SERIES);
+  s.jma.advisories = applyCoexist(s.jma.advisories, newTide === '高潮注意報' ? newTide : null, TIDE_SERIES);
+  s.jma.warnings = applyCoexist(s.jma.warnings, newTide === '高潮警報' ? newTide : null, TIDE_SERIES);
+  s.jma.special = applyCoexist(s.jma.special, newTide === '高潮特別警報' ? newTide : null, TIDE_SERIES);
 
   // 重複削除
   const uniq = (arr) => Array.from(new Set(arr.filter(Boolean)));
@@ -586,6 +618,7 @@ const SYSTEM = `
 - エリアメールは「甲高いチャイム」「ポケットが震える」など1文で描写（助言はしない）。
 - 家族は確認できるまで "unknown"。在宅/外出/不明/到着は updates.familyLocations で更新。
 - ユーザーが移動を示唆すれば、updates.evac を段階進行し、毎ターン1文で道中の断片（journeySnippet）を出す。
+- 建物の階数制約を厳守：scenario.house.floors が 1 なら「2階へ避難」は物理的に不可能。描写時に必ず確認すること。
 - 一貫性重視、奇跡や超常は禁止。
 - away/unknown の家族には、毎ターンかならず updates.returnETAs を含める（残りターンは増減させない）。欠落は不可。
 - ユーザーが「状況を確認」「安否確認」「電話/連絡」などを示したターンは、updates.family を "safe" にできる範囲で更新。
