@@ -153,7 +153,11 @@ function applySafetyRules(prev = {}, proposed = {}) {
       route: [],
       hazards: [],
       shelterName: prev.scenario?.shelter || '避難所',
-      distanceLeft: 100, // 0で到着
+      evacuationStartTurn: 0,
+      turnsRequired: 2,
+      turnsElapsed: 0,
+      hasKittenEvent: false,
+      hasFloodEvent: false,
       journeyLog: [],
     };
   }
@@ -166,7 +170,6 @@ function applySafetyRules(prev = {}, proposed = {}) {
     const {
       journeyLog: incomingJourneyLog,
       journeySnippet,
-      distanceLeft,
       status,
       route,
       hazards,
@@ -178,9 +181,6 @@ function applySafetyRules(prev = {}, proposed = {}) {
     if (Array.isArray(route)) s.evac.route = route;
     if (Array.isArray(hazards)) s.evac.hazards = hazards;
     if (typeof shelterName === 'string') s.evac.shelterName = shelterName;
-    if (typeof distanceLeft === 'number') {
-      s.evac.distanceLeft = Math.max(0, distanceLeft);
-    }
 
     // journeyLog配列が来たら安全に追記
     if (Array.isArray(incomingJourneyLog)) {
@@ -198,21 +198,43 @@ function applySafetyRules(prev = {}, proposed = {}) {
 
   // 避難を開始したターン：在宅→避難中へ
   if ((prev.evac?.status || 'none') !== 'en_route' && s.evac.status === 'en_route') {
+    s.evac.evacuationStartTurn = s.turn;
+    s.evac.turnsElapsed = 0;
+    s.evac.turnsRequired = 2;
+    
+    const lastAction = prev._lastAction || '';
+    const neighborKeywords = ['声をかけ', '呼びかけ', '周囲', '近所', '周りに', '隣人'];
+    const calledOutToNeighbors = neighborKeywords.some(k => lastAction.includes(k));
+    if (calledOutToNeighbors) {
+      s._neighborCalloutBonus = { compassion: 2, safety: 1 };
+    }
+    
     s.familyLocations = (s.familyLocations || []).map(x => ({
       ...x,
       location: x.location === 'home' ? 'en_route' : x.location,
     }));
   }
 
-  // 避難中は距離を減らす
-  if (s.evac.status === 'en_route' && typeof s.evac.distanceLeft === 'number' && s.evac.distanceLeft > 0) {
-    const speedPerTurn = 25; // ←お好みで調整
-    s.evac.distanceLeft = Math.max(0, s.evac.distanceLeft - speedPerTurn);
-    s.evac.journeyLog.push({ turn: s.turn, text: `避難中：残り${s.evac.distanceLeft}m` });
+  if (s.evac.status === 'en_route') {
+    s.evac.turnsElapsed = s.turn - s.evac.evacuationStartTurn;
+    
+    const lastAction = prev._lastAction || '';
+    const hasKittenKeyword = (lastAction.includes('子猫') || lastAction.includes('猫')) && 
+                              (lastAction.includes('助ける') || lastAction.includes('救う') || lastAction.includes('保護'));
+    if (hasKittenKeyword && !s.evac.hasKittenEvent) {
+      s.evac.hasKittenEvent = true;
+      s.evac.turnsRequired += 1;
+      s.evac.journeyLog.push({ turn: s.turn, text: '子猫を助けたため、避難に1ターン余分にかかります。' });
+    }
+    
+    if (!s.evac.hasFloodEvent && Math.random() < 0.25) {
+      s.evac.hasFloodEvent = true;
+      s.evac.turnsRequired += 1;
+      s.evac.journeyLog.push({ turn: s.turn, text: '経路が冠水しており、迂回が必要です。避難に1ターン余分にかかります。' });
+    }
   }
 
-  // 距離0で到着
-  if (s.evac.status === 'en_route' && s.evac.distanceLeft === 0) {
+  if (s.evac.status === 'en_route' && s.evac.turnsElapsed >= s.evac.turnsRequired) {
     s.evac.status = 'arrived';
     s.familyLocations = (s.familyLocations || []).map(x => ({
       ...x,
@@ -441,7 +463,7 @@ function applySafetyRules(prev = {}, proposed = {}) {
 
     if (cur.rank > prev) {
       s._jmaPrev[key] = cur.rank;
-      s._jmaHold[key] = 2;
+      s._jmaHold[key] = 3;
     } else if (cur.rank < prev && hold > 0) {
       const targetName = series.find((n) => levelRank(n) === prev);
       clearSeries(series);
@@ -677,7 +699,8 @@ const SYSTEM = `
       "status": "none|en_route|arrived|aborted",
       "route": [],
       "hazards": [],
-      "distanceLeft": 60,
+      "turnsElapsed": 1,
+      "turnsRequired": 3,
       "journeySnippet": "暗い坂道で枝が折れて転がる。足音だけがやけに響く。"
     },
     "scoreDelta": { "safety": -2..2, "compassion": -2..2, "composure": -2..2 }
@@ -689,7 +712,7 @@ const SYSTEM = `
 - 土砂前兆：井戸の水が濁る／斜面から湧水／木がざわめく／地鳴り／土の匂いの変化 など。
 - エリアメールは「甲高いチャイム」「ポケットが震える」など1文で描写（助言はしない）。
 - 家族は確認できるまで "unknown"。在宅/外出/不明/到着は updates.familyLocations で更新。
-- ユーザーが移動を示唆すれば、updates.evac を段階進行し、毎ターン1文で道中の断片（journeySnippet）を出す。
+- ユーザーが移動を示唆すれば、updates.evac を段階進行し、毎ターン1文で道中の断片（journeySnippet）を出す。避難は最短2ターンで完了し、子猫を助けたり経路が冠水している場合は追加で1ターンかかる。
 - **【重要】建物の階数制約を厳守：scenario.house.floors が 1 なら「2階」は存在しない。「2階へ避難」「階段を上がる」などの描写は物理的に不可能。描写前に必ず scenario.house.floors を確認し、存在しない階への言及は絶対に避けること。currentFloor は scenario.house.floors を超えてはならない。**
 - 一貫性重視、奇跡や超常は禁止。
 - away/unknown の家族には、毎ターンかならず updates.returnETAs を含める（残りターンは増減させない）。欠落は不可。
@@ -770,11 +793,16 @@ app.post('/api/facilitator', async (req, res) => {
 
     // スコア反映
     const d = updates?.scoreDelta || {};
+    const neighborBonus = next._neighborCalloutBonus || { compassion: 0, safety: 0 };
     next.scores = {
-      safety: (next.scores?.safety || 0) + (d.safety || 0),
-      compassion: (next.scores?.compassion || 0) + (d.compassion || 0),
+      safety: (next.scores?.safety || 0) + (d.safety || 0) + (neighborBonus.safety || 0),
+      compassion: (next.scores?.compassion || 0) + (d.compassion || 0) + (neighborBonus.compassion || 0),
       composure: (next.scores?.composure || 0) + (d.composure || 0),
     };
+    
+    if (next._neighborCalloutBonus) {
+      delete next._neighborCalloutBonus;
+    }
 
     // 物語ログ
     next.story = [...(next.story || []), { turn: next.turn - 1, narration, action: lastAction }];
