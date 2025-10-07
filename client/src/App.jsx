@@ -225,7 +225,7 @@ export default function App() {
         const loc = locByName[name];
         acc[loc] = (acc[loc] || 0) + 1;
         return acc;
-    }, { home: 0, away: 0, unknown: 0, arrived: 0 });
+    }, { home: 0, away: 0, unknown: 0, arrived: 0, en_route: 0 });
 
     // 外出/不明の詳細（ETAと分散避難の表示に使用）
     const formatAway = name => {
@@ -242,7 +242,7 @@ export default function App() {
     const familyBadge = (
         <Badge color="blue">
             家族: 合計{roster.length}
-            （在宅{counts.home}・外出{counts.away}・不明{counts.unknown}・到着{counts.arrived}）
+            （在宅{counts.home}・避難中{counts.en_route}・外出{counts.away}・不明{counts.unknown}・到着{counts.arrived}）
             {awayNames.length > 0 ? ` ／外出: ${awayNames.join('、')}` : ''}
             {unknownNames.length > 0 ? ` ／不明: ${unknownNames.join('、')}` : ''}
         </Badge>
