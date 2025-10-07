@@ -16,19 +16,6 @@ const MIN_TURNS = 5; // 最低ターン（ドラマ性のため）
 const END_TURNS = 8; // 伸びすぎ防止の自動終了
 
 const EVAC_INFO = ['なし', '高齢者等避難', '避難指示', '緊急安全確保'];
-const hasAnyJMA = (jma) =>
-  (jma?.special?.length || 0) +
-  (jma?.warnings?.length || 0) +
-  (jma?.advisories?.length || 0) >
-  0;
-
-const mergeState = (prev, updates = {}) => {
-  const next = { ...prev, ...updates };
-  if (updates.jma) next.jma = { ...(prev.jma || {}), ...updates.jma };
-  if (updates.landslide)
-    next.landslide = { ...(prev.landslide || {}), ...updates.landslide };
-  return next;
-};
 
 // ---------- シナリオ生成（家族・住宅・時間帯） ----------
 function choice(arr) {
@@ -303,24 +290,31 @@ function applySafetyRules(prev = {}, proposed = {}) {
   // 今ターンが静穏か
   const calmNow = noJMA && noRiver && noEvacInfo;
 
-  // --- JMA フォールバック：AIが空ならターンに応じて最低1件入れる ---
-  const noJMAProvided =
-    (!s.jma?.special?.length) &&
-    (!s.jma?.warnings?.length) &&
-    (!s.jma?.advisories?.length);
+  // --- JMA 段階的進行の強制：ターンに応じて最低レベルを保証 ---
+  const t = s.turn || 1;
+  const hasSpecial = (s.jma?.special?.length || 0) > 0;
+  const hasWarnings = (s.jma?.warnings?.length || 0) > 0;
+  const hasAdvisories = (s.jma?.advisories?.length || 0) > 0;
 
-  if (noJMAProvided) {
-    const t = s.turn || 1;
-    if (t <= 2) {
-      s.jma.advisories.push('強風注意報');
-    } else if (t <= 4) {
+  if (t <= 2 && !hasAdvisories && !hasWarnings && !hasSpecial) {
+    s.jma.advisories.push('強風注意報');
+  }
+
+  if (t >= 3 && t <= 4 && !hasWarnings && !hasSpecial) {
+    if (hasAdvisories && !hasWarnings) {
       s.jma.warnings.push('大雨警報');
+    } else if (!hasAdvisories && !hasWarnings) {
+      s.jma.warnings.push('大雨警報');
+    }
+  }
+
+  if (t >= 5 && !hasSpecial) {
+    if (Math.random() < 0.9) {
+      s.jma.special.push('大雨特別警報');
     } else {
-      // 5ターン以降は特別警報 or 収束（10%）
-      if (Math.random() < 0.1) {
+      s.jma.special = [];
+      if (s.jma.warnings.length === 0) {
         s.jma.advisories.push('大雨注意報');
-      } else {
-        s.jma.special.push('暴風特別警報');
       }
     }
   }
