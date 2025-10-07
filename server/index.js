@@ -204,7 +204,10 @@ function applySafetyRules(prev = {}, proposed = {}) {
   // ------------------------------------------------------------
   // ------------------------------------------------------------
   const evacuationKeywords = ['避難所', '避難', '移動', '向かう', '出発', '出る'];
-  const isEvacuating = evacuationKeywords.some(k => lastAction.includes(k));
+  const preparationKeywords = ['準備', '用意', 'チェック', '確認'];
+  const hasEvacuationKeyword = evacuationKeywords.some(k => lastAction.includes(k));
+  const hasPreparationKeyword = preparationKeywords.some(k => lastAction.includes(k));
+  const isEvacuating = hasEvacuationKeyword && !hasPreparationKeyword;
   
   if (isEvacuating && (s.evac.status === 'none' || s.evac.status === 'aborted')) {
     s.evac.status = 'en_route';
@@ -325,6 +328,11 @@ function applySafetyRules(prev = {}, proposed = {}) {
       // メッセージに家族の名前が含まれているかチェック
       if (lastAction.includes(name)) {
         s.contactedFamily[name] = true;
+        
+        const idx = (s.familyLocations || []).findIndex(x => x.name === name);
+        if (idx >= 0 && s.familyLocations[idx].location === 'unknown') {
+          s.familyLocations[idx].location = 'away';
+        }
       }
     });
   }
