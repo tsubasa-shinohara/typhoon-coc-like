@@ -230,13 +230,13 @@ export default function App() {
     const evacLabel = (() => {
         const st = state.evac?.status || 'none';
         if (st === 'en_route') {
-            const d = state.evac?.distanceLeft;
-            const dText = (typeof d === 'number') ? d : '?';
-            return `避難中：残り${dText}m`;
+            const turnsElapsed = state.evac?.turnsElapsed || 0;
+            const turnsRequired = state.evac?.turnsRequired || 2;
+            return `避難中：あと${Math.max(0, turnsRequired - turnsElapsed)}ターン`;
         }
         if (st === 'arrived') return '避難所に到着';
         if (st === 'aborted') return '避難を中止';
-        return '自宅待機中';
+        return `自宅待機中（${state.currentFloor}階）`;
     })();
 
     const evacBadge = (
@@ -244,12 +244,6 @@ export default function App() {
             {evacLabel}
         </Badge>
     );
-    
-    const floorBadge = state.evac?.status === 'none' ? (
-        <Badge color="blue">
-            現在: {state.currentFloor}階
-        </Badge>
-    ) : null;
 
     // JMA バッジカラー関数を先に追加（Badge群の上に）
     const jmaColor = (name) => {
@@ -387,7 +381,6 @@ export default function App() {
                 {familyBadge}
                 {timeBadge}
                 {evacBadge}
-                {floorBadge}
                 {etaBadge}
             </div>
 
