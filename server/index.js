@@ -203,7 +203,7 @@ function applySafetyRules(prev = {}, proposed = {}) {
 
   // ------------------------------------------------------------
   // ------------------------------------------------------------
-  const evacuationKeywords = ['避難所', '避難する', '避難しよう', '避難します', '移動する', '向かう', '出発'];
+  const evacuationKeywords = ['避難所', '避難', '移動', '向かう', '出発', '出る'];
   const isEvacuating = evacuationKeywords.some(k => lastAction.includes(k));
   
   if (isEvacuating && (s.evac.status === 'none' || s.evac.status === 'aborted')) {
@@ -808,7 +808,7 @@ app.post('/api/facilitator', async (req, res) => {
     }
 
     // choices のフォールバック（必ず3件、状況に応じて）
-    if (!choices || choices.length < 3) {
+    if (true) {
       const evac = (state?.evac?.status) || 'none';
       const maxFloors = state?.scenario?.house?.floors || 2;
       const currentFloor = state?.currentFloor || 1;
