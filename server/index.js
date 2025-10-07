@@ -804,8 +804,6 @@ app.post('/api/facilitator', async (req, res) => {
         : ['祖母の手を取り二階へ', '子を先に避難路へ走らせる', '最新の警報を確認する'];
     }
 
-    res.json({ text: safeNarr, choices, newState: { ...next, finalReport } });
-
     // lastAction を state に保存（家族連絡検知用）
     const lastAction = messages?.slice(-1)?.[0]?.content || '';
     if (state) {
@@ -841,7 +839,7 @@ app.post('/api/facilitator', async (req, res) => {
       finalReport = buildFinalReport(next);
     }
 
-    res.json({ text: narration, choices, newState: { ...next, finalReport } });
+    res.json({ text: safeNarr, choices, newState: { ...next, finalReport } });
   } catch (e) {
     console.error('[AI ERROR]', e?.message || e);
     res.status(500).json({ error: 'AI応答エラー', detail: e?.message || String(e) });
