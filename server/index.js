@@ -534,11 +534,6 @@ function applySafetyRules(prev = {}, proposed = {}) {
     s.alerts = s.alerts || [];
     if (!s.alerts.includes('エリアメール受信')) {
       s.alerts.push('エリアメール受信');
-      s.evacuationInfo = s.evacuationInfo || '高齢者等避難'; // デフォルト反応（初期レベル）
-      // エリアメール発信時に行動段階を上げる（確率的に）
-      const stepUp = Math.random();
-      if (stepUp > 0.6) s.evacuationInfo = '避難指示';
-      if (stepUp > 0.9) s.evacuationInfo = '緊急安全確保';
     }
   }
 
