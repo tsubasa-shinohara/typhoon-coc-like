@@ -164,6 +164,11 @@ function applySafetyRules(prev = {}, proposed = {}) {
   if (!Array.isArray(s.evac.journeyLog)) s.evac.journeyLog = [];
 
   // ------------------------------------------------------------
+  // lastAction を最初に宣言（全体で使用）
+  // ------------------------------------------------------------
+  const lastAction = prev._lastAction || '';
+
+  // ------------------------------------------------------------
   // proposed.evac の安全マージ（上書き事故を防止）
   // ------------------------------------------------------------
   if (proposed.evac) {
@@ -196,13 +201,21 @@ function applySafetyRules(prev = {}, proposed = {}) {
     }
   }
 
+  // ------------------------------------------------------------
+  // ------------------------------------------------------------
+  const evacuationKeywords = ['避難所', '避難する', '避難しよう', '避難します', '移動する', '向かう', '出発'];
+  const isEvacuating = evacuationKeywords.some(k => lastAction.includes(k));
+  
+  if (isEvacuating && (s.evac.status === 'none' || s.evac.status === 'aborted')) {
+    s.evac.status = 'en_route';
+  }
+
   // 避難を開始したターン：在宅→避難中へ
   if ((prev.evac?.status || 'none') !== 'en_route' && s.evac.status === 'en_route') {
     s.evac.evacuationStartTurn = s.turn;
     s.evac.turnsElapsed = 0;
     s.evac.turnsRequired = 2;
 
-    const lastAction = prev._lastAction || '';
     const neighborKeywords = ['声をかけ', '呼びかけ', '周囲', '近所', '周りに', '隣人'];
     const calledOutToNeighbors = neighborKeywords.some(k => lastAction.includes(k));
     if (calledOutToNeighbors) {
@@ -218,7 +231,6 @@ function applySafetyRules(prev = {}, proposed = {}) {
   if (s.evac.status === 'en_route') {
     s.evac.turnsElapsed = s.turn - s.evac.evacuationStartTurn;
 
-    const lastAction = prev._lastAction || '';
     const hasKittenKeyword = (lastAction.includes('子猫') || lastAction.includes('猫')) &&
       (lastAction.includes('助ける') || lastAction.includes('救う') || lastAction.includes('保護'));
     if (hasKittenKeyword && !s.evac.hasKittenEvent) {
@@ -303,7 +315,6 @@ function applySafetyRules(prev = {}, proposed = {}) {
 
   // === 家族への連絡検知 ===
   // lastAction（ユーザーのメッセージ）から家族への連絡を検知
-  const lastAction = prev._lastAction || '';
   const contactKeywords = ['確認', '連絡', '電話', '安否', '状況', '様子'];
   const hasContactKeyword = contactKeywords.some(k => lastAction.includes(k));
 
@@ -796,12 +807,63 @@ app.post('/api/facilitator', async (req, res) => {
       safeNarr = '風がうなり、家は小さく軋む。暗がりの中、鼓動が早まる。';
     }
 
-    // choices のフォールバック（必ず3件）
+    // choices のフォールバック（必ず3件、状況に応じて）
     if (!choices || choices.length < 3) {
       const evac = (state?.evac?.status) || 'none';
-      choices = (evac === 'en_route')
-        ? ['足元を照らし静かに進む', '冠水路を避けて回り込む', '一旦立ち止まり状況確認']
-        : ['祖母の手を取り二階へ', '子を先に避難路へ走らせる', '最新の警報を確認する'];
+      const maxFloors = state?.scenario?.house?.floors || 2;
+      const currentFloor = state?.currentFloor || 1;
+      const hasWarnings = (state?.jma?.warnings?.length || 0) > 0;
+      const hasSpecialWarnings = (state?.jma?.special?.length || 0) > 0;
+      
+      if (evac === 'en_route') {
+        choices = [
+          '足元を照らし静かに進む',
+          '冠水路を避けて回り込む',
+          '一旦立ち止まり状況確認'
+        ];
+      } else if (hasSpecialWarnings) {
+        if (maxFloors > 1 && currentFloor < maxFloors) {
+          choices = [
+            '家族を上階へ誘導する',
+            '窓から離れて待機する',
+            '最新の警報を確認する'
+          ];
+        } else {
+          choices = [
+            '窓から離れて待機する',
+            '救助要請の準備をする',
+            '最新の警報を確認する'
+          ];
+        }
+      } else if (hasWarnings) {
+        if (maxFloors > 1 && currentFloor < maxFloors) {
+          choices = [
+            '家族を上階へ避難させる',
+            '避難所への移動を準備する',
+            '家族の安否を確認する'
+          ];
+        } else {
+          choices = [
+            '避難所への移動を準備する',
+            '家族の安否を確認する',
+            '非常用品を確認する'
+          ];
+        }
+      } else {
+        if (maxFloors > 1) {
+          choices = [
+            '家族の所在を確認する',
+            '避難の準備を進める',
+            '最新の気象情報を確認する'
+          ];
+        } else {
+          choices = [
+            '家族の所在を確認する',
+            '避難の準備を進める',
+            '窓や雨戸を確認する'
+          ];
+        }
+      }
     }
 
     // lastAction を state に保存（家族連絡検知用）
