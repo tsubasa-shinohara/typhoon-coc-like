@@ -77,6 +77,20 @@ function applySafetyRules(prev = {}, proposed = {}) {
   if (typeof u.mobileSignal === 'string') s.mobileSignal = u.mobileSignal;
   if (typeof u.alertReceived === 'boolean') s.alertReceived = u.alertReceived;
   if (typeof u.alertType === 'string') s.alertType = u.alertType;
+  if (typeof u.currentFloor === 'number') s.currentFloor = u.currentFloor;
+  
+  // 初期化: プレイヤーの現在階（デフォルト1階）
+  if (!s.currentFloor) s.currentFloor = 1;
+  
+  // 階数制約の検証
+  const maxFloors = prev.scenario?.house?.floors || 2;
+  if (s.currentFloor < 1) s.currentFloor = 1;
+  if (s.currentFloor > maxFloors) s.currentFloor = maxFloors;
+  
+  // AI出力の階数制約違反を防ぐ
+  if (u.currentFloor && u.currentFloor > maxFloors) {
+    s.currentFloor = maxFloors;
+  }
 
   // JMA（注意報・警報・特別警報）
   if (u.jma && typeof u.jma === 'object') {
@@ -117,6 +131,9 @@ function applySafetyRules(prev = {}, proposed = {}) {
   if (u.returnETAs && typeof u.returnETAs === 'object') {
     s.returnETAs = { ...(s.returnETAs || {}), ...u.returnETAs };
   }
+  
+  // 連絡済み家族の追跡
+  if (!s.contactedFamily) s.contactedFamily = {};
 
   // 家族所在の初期化（名簿ベース）
   if (!s.familyLocations || s.familyLocations.length === 0) {
@@ -261,8 +278,29 @@ function applySafetyRules(prev = {}, proposed = {}) {
       }
     }
   }
+  
+  // === 家族への連絡検知 ===
+  // lastAction（ユーザーのメッセージ）から家族への連絡を検知
+  const lastAction = prev._lastAction || '';
+  const contactKeywords = ['確認', '連絡', '電話', '安否', '状況', '様子'];
+  const hasContactKeyword = contactKeywords.some(k => lastAction.includes(k));
+  
+  if (hasContactKeyword) {
+    // 家族名簿の各メンバーをチェック
+    (prev.scenario?.family || []).forEach(member => {
+      const name = member.name;
+      // メッセージに家族の名前が含まれているかチェック
+      if (lastAction.includes(name)) {
+        s.contactedFamily[name] = true;
+      }
+    });
+  }
+  
+  // lastActionを保存（次ターンで使用）
+  s._lastAction = lastAction;
+  
   // === 台風通過（自然終了）判定 ===
-  // 「なし / 情報なし / 未定義」を広く“静穏”とみなすヘルパー
+  // 「なし / 情報なし / 未定義」を広く"静穏"とみなすヘルパー
   const isNone = (v) => v == null || v === 'なし' || v === '情報なし';
   const arrNone = (a) => {
     if (a == null) return true;                  // 未定義 → 静穏扱い
@@ -488,6 +526,61 @@ function applySafetyRules(prev = {}, proposed = {}) {
     }
   }
 
+  // === 被災確率シナリオ（65%） ===
+  if (!s.disasterOccurred && s.evacuationInfo === '緊急安全確保') {
+    let shouldTriggerDisaster = false;
+    let disasterReason = '';
+    
+    // シナリオ1: 避難中に緊急安全確保
+    if (s.evac?.status === 'en_route') {
+      if (Math.random() < 0.65) {
+        shouldTriggerDisaster = true;
+        disasterReason = '避難が間に合わず、避難経路で被災しました。緊急安全確保の発令が遅すぎました。';
+      }
+    }
+    
+    // シナリオ2: 崖付近でない + 1階待機中 + 緊急安全確保
+    const isNearCliff = (prev.scenario?.house?.area || '').includes('山裾・斜面近く');
+    if (!shouldTriggerDisaster && s.evac?.status === 'none' && !isNearCliff && s.currentFloor === 1) {
+      if (Math.random() < 0.65) {
+        shouldTriggerDisaster = true;
+        disasterReason = '1階での待機中に浸水が急速に進み、被災しました。垂直避難が間に合いませんでした。';
+      }
+    }
+  }
+  
+  // シナリオ3: 崖付近 + 自宅待機中 + 土砂災害警戒情報
+  if (!s.disasterOccurred && s.evac?.status === 'none') {
+    const isNearCliff = (prev.scenario?.house?.area || '').includes('山裾・斜面近く');
+    if (isNearCliff && s.landslide?.info === '土砂災害警戒情報') {
+      if (Math.random() < 0.65) {
+        let shouldTriggerDisaster = false;
+        let disasterReason = '';
+        shouldTriggerDisaster = true;
+        disasterReason = '土砂災害警戒情報発令中、斜面付近の自宅で待機していたため土砂崩れに巻き込まれました。早期避難が必要でした。';
+        
+        // 被災が発生した場合
+        if (shouldTriggerDisaster) {
+          s.disasterOccurred = true;
+          s.gameEnded = true;
+          s.phase = 'ended';
+          s.ending = {
+            type: 'disaster',
+            summary: disasterReason,
+            safetyScore: 0,
+            turnEnded: s.turn,
+          };
+          
+          // 家族全員の状態を更新
+          s.familyLocations = (s.familyLocations || []).map(f => ({
+            ...f,
+            location: 'disaster'
+          }));
+        }
+      }
+    }
+  }
+
   if (t <= 2 && !hasAdvisories && !hasWarnings && !hasSpecial) {
     s.jma.advisories.push('強風注意報');
   }
@@ -563,6 +656,7 @@ const SYSTEM = `
   "updates": {
     "powerOutage": true/false,
     "floodLevel": "none|road|house_1f|house_2f",
+    "currentFloor": 1 | 2 | 3,
     "jma": { "special":[], "warnings":[], "advisories":[] },
     "river": "情報なし|氾濫注意情報|氾濫警戒情報|氾濫危険情報|氾濫発生情報",
     "evacuationInfo": "なし|高齢者等避難|避難指示|緊急安全確保",
@@ -596,7 +690,7 @@ const SYSTEM = `
 - エリアメールは「甲高いチャイム」「ポケットが震える」など1文で描写（助言はしない）。
 - 家族は確認できるまで "unknown"。在宅/外出/不明/到着は updates.familyLocations で更新。
 - ユーザーが移動を示唆すれば、updates.evac を段階進行し、毎ターン1文で道中の断片（journeySnippet）を出す。
-- 建物の階数制約を厳守：scenario.house.floors が 1 なら「2階へ避難」は物理的に不可能。描写時に必ず確認すること。
+- **【重要】建物の階数制約を厳守：scenario.house.floors が 1 なら「2階」は存在しない。「2階へ避難」「階段を上がる」などの描写は物理的に不可能。描写前に必ず scenario.house.floors を確認し、存在しない階への言及は絶対に避けること。currentFloor は scenario.house.floors を超えてはならない。**
 - 一貫性重視、奇跡や超常は禁止。
 - away/unknown の家族には、毎ターンかならず updates.returnETAs を含める（残りターンは増減させない）。欠落は不可。
 - ユーザーが「状況を確認」「安否確認」「電話/連絡」などを示したターンは、updates.family を "safe" にできる範囲で更新。
@@ -666,6 +760,12 @@ app.post('/api/facilitator', async (req, res) => {
     const narration = data?.narration || '（描写が生成できませんでした）';
     const updates = data?.updates || {};
 
+    // lastAction を state に保存（家族連絡検知用）
+    const lastAction = messages?.slice(-1)?.[0]?.content || '';
+    if (state) {
+      state._lastAction = lastAction;
+    }
+
     let next = applySafetyRules(state || {}, updates);
 
     // スコア反映
@@ -677,7 +777,6 @@ app.post('/api/facilitator', async (req, res) => {
     };
 
     // 物語ログ
-    const lastAction = messages?.slice(-1)?.[0]?.content || '';
     next.story = [...(next.story || []), { turn: next.turn - 1, narration, action: lastAction }];
 
     // 自動終了ガード
