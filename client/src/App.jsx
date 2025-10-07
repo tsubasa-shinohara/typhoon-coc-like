@@ -116,12 +116,51 @@ export default function App() {
         const intro = `【導入】${scenario.house.area}の${scenario.house.floors}階建て。時刻は${scenario.timeOfDay}。家族：${scenario.family
             .map((f) => `${f.name}${f.location === 'unknown' ? '（不明）' : ''}`)
             .join('、')}。雨脚は強まり、家は時折きしむ。どう動く？`;
-        setMessages([{ role: 'assistant', content: intro }]);
-        setState((s) => ({
-            ...s,
-            scenario,
+        
+        const initialState = {
+            turn: 1,
+            powerOutage: false,
+            mobileSignal: '通話可',
+            floodLevel: 'none',
+            jma: { special: [], warnings: [], advisories: [] },
+            river: '情報なし',
+            evacuationInfo: 'なし',
+            landslide: { risk: 'none', info: 'なし', precursors: [] },
+            family: 'unknown',
             familyLocations: scenario.family.map((m) => ({ name: m.name, location: m.location })),
-        }));
+            alertReceived: false,
+            alertType: 'なし',
+            phase: 'ongoing',
+            scores: { safety: 0, compassion: 0, composure: 0 },
+            story: [],
+            finalReport: null,
+            scenario: scenario,
+            evac: { status: 'none', route: [], hazards: [], journeyLog: [] },
+            returnETAs: {},
+            splitPlans: {},
+            currentFloor: 1,
+            contactedFamily: {},
+            _choices: null,
+        };
+        
+        setMessages([{ role: 'assistant', content: intro }]);
+        setState(initialState);
+        
+        (async () => {
+            try {
+                const res = await axios.post('http://localhost:8787/api/facilitator', {
+                    messages: [{ role: 'assistant', content: intro }],
+                    lastRoll: null,
+                    state: initialState,
+                });
+                const { choices } = res.data;
+                if (choices) {
+                    setState((s) => ({ ...s, _choices: choices }));
+                }
+            } catch (e) {
+                console.error('Failed to fetch initial choices:', e);
+            }
+        })();
     }, [scenario]);
 
     // ④ 送信
