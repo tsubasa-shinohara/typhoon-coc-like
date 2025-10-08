@@ -53,9 +53,12 @@ function generateInitialScenario() {
     if (members[idx].role !== 'player') members[idx].location = 'unknown';
   }
 
+  const hasElderly = members.some(m => m.role === 'elder');
+  const carAvailable = Math.random() < 0.6;
+
   const shelter = choice(['第一小学校 体育館', '市民センター', '地区防災広場']);
 
-  return { house, timeOfDay, family: members, shelter };
+  return { house, timeOfDay, family: members, shelter, hasElderly, carAvailable };
 }
 
 // ---------- 状態補正 ----------
@@ -75,6 +78,9 @@ function applySafetyRules(prev = {}, proposed = {}) {
   if (typeof u.river === 'string') s.riverInfo = u.river;            // "情報なし|氾濫注意情報|…"
   if (typeof u.evacuationInfo === 'string') s.evacuationInfo = u.evacuationInfo;
   if (typeof u.mobileSignal === 'string') s.mobileSignal = u.mobileSignal;
+  if (typeof u.carUse === 'boolean') s.carUse = u.carUse;
+  if (typeof u.neighborOutreach === 'boolean') s.neighborOutreach = u.neighborOutreach;
+  if (typeof u.routeConfirmed === 'boolean') s.routeConfirmed = u.routeConfirmed;
   if (typeof u.alertReceived === 'boolean') s.alertReceived = u.alertReceived;
   if (typeof u.alertType === 'string') s.alertType = u.alertType;
   if (typeof u.currentFloor === 'number') s.currentFloor = u.currentFloor;
@@ -198,6 +204,23 @@ function applySafetyRules(prev = {}, proposed = {}) {
     // 1件スニペット（文字列）も追記
     if (typeof journeySnippet === 'string' && journeySnippet.trim()) {
       s.evac.journeyLog.push({ turn: s.turn, text: journeySnippet.trim() });
+    }
+  }
+
+  if (s.evac.status === 'en_route' && s.evac.turnsRequired) {
+    let reduction = 0;
+    if (s.neighborOutreach) reduction += 1;
+    if (s.routeConfirmed) reduction += 1;
+    
+    if (reduction > 0) {
+      s.evac.turnsRequired = Math.max(1, s.evac.turnsRequired - reduction);
+    }
+  }
+
+  if (s.carUse && !s.scenario?.hasElderly && s.evac.status === 'en_route') {
+    if (!s.evac.hazards) s.evac.hazards = [];
+    if (!s.evac.hazards.includes('道路冠水')) {
+      s.evac.hazards.push('道路冠水');
     }
   }
 
@@ -710,6 +733,9 @@ const SYSTEM = `
     "mobileSignal": "通話可|不通",
     "alertReceived": true/false,
     "alertType": "なし|高齢者等避難|避難指示|緊急安全確保",
+    "carUse": true/false,
+    "neighborOutreach": true/false,
+    "routeConfirmed": true/false,
     "landslide": {
       "risk": "none|low|medium|high",
       "info": "なし|注意|警戒|危険|発生",

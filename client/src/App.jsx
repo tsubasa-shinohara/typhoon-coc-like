@@ -101,6 +101,9 @@ export default function App() {
         splitPlans: {},
         currentFloor: 1,
         contactedFamily: {},
+        carUse: false,
+        neighborOutreach: false,
+        routeConfirmed: false,
         _choices: null,
     });
 
@@ -140,6 +143,9 @@ export default function App() {
             splitPlans: {},
             currentFloor: 1,
             contactedFamily: {},
+            carUse: false,
+            neighborOutreach: false,
+            routeConfirmed: false,
             _choices: null,
         };
         
