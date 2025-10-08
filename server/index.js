@@ -169,22 +169,6 @@ function applySafetyRules(prev = {}, proposed = {}) {
   const lastAction = prev._lastAction || '';
 
   // ------------------------------------------------------------
-  // ------------------------------------------------------------
-  const floorKeywords = ['階', '2階', '3階', '上階', '階段'];
-  const movementKeywords = ['移動', '避難', '上がる', '登る', '行く'];
-  const hasFloorKeyword = floorKeywords.some(k => lastAction.includes(k));
-  const hasMovementKeyword = movementKeywords.some(k => lastAction.includes(k));
-  
-  if (hasFloorKeyword && hasMovementKeyword) {
-    const attemptedFloor = lastAction.includes('3階') ? 3 : lastAction.includes('2階') ? 2 : null;
-    
-    if (attemptedFloor && attemptedFloor > maxFloors) {
-      if (!s.floorMovementFeedback) s.floorMovementFeedback = [];
-      s.floorMovementFeedback.push({ turn: s.turn, text: `この家に${attemptedFloor}階はなかった…。` });
-    }
-  }
-
-  // ------------------------------------------------------------
   // proposed.evac の安全マージ（上書き事故を防止）
   // ------------------------------------------------------------
   if (proposed.evac) {
@@ -897,6 +881,23 @@ app.post('/api/facilitator', async (req, res) => {
     const lastAction = messages?.slice(-1)?.[0]?.content || '';
     if (state) {
       state._lastAction = lastAction;
+    }
+
+    // ------------------------------------------------------------
+    // ------------------------------------------------------------
+    const maxFloors = state?.scenario?.house?.floors || 2;
+    const floorKeywords = ['階', '2階', '3階', '上階', '階段'];
+    const movementKeywords = ['移動', '避難', '上がる', '登る', '行く'];
+    const hasFloorKeyword = floorKeywords.some(k => lastAction.includes(k));
+    const hasMovementKeyword = movementKeywords.some(k => lastAction.includes(k));
+    
+    if (hasFloorKeyword && hasMovementKeyword) {
+      const attemptedFloor = lastAction.includes('3階') ? 3 : lastAction.includes('2階') ? 2 : null;
+      
+      if (attemptedFloor && attemptedFloor > maxFloors) {
+        if (!state.floorMovementFeedback) state.floorMovementFeedback = [];
+        state.floorMovementFeedback.push({ turn: state.turn || 1, text: `この家に${attemptedFloor}階はなかった…。` });
+      }
     }
 
     let next = applySafetyRules(state || {}, updates);
