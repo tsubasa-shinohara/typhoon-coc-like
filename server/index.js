@@ -888,7 +888,7 @@ app.post('/api/facilitator', async (req, res) => {
     // ------------------------------------------------------------
     const maxFloors = state?.scenario?.house?.floors || 2;
     const floorKeywords = ['階', '2階', '3階', '上階', '階段'];
-    const movementKeywords = ['移動', '移る', '避難', '上がる', '登る', '行く', '昇る'];
+    const movementKeywords = ['移動', '移る', '避難', '上がる', '登る', '行く', '昇る', '向かう', '目指す', '突撃'];
     const hasFloorKeyword = floorKeywords.some(k => lastAction.includes(k));
     const hasMovementKeyword = movementKeywords.some(k => lastAction.includes(k));
     
