@@ -251,7 +251,7 @@ function applySafetyRules(prev = {}, proposed = {}) {
   // ------------------------------------------------------------
   // ------------------------------------------------------------
   const evacuationKeywords = ['避難所', '避難', '移動', '向かう', '出発', '出る', '目指す'];
-  const preparationKeywords = ['準備', '用意', 'チェック', '確認'];
+  const preparationKeywords = ['準備', '用意', 'チェック'];
   const hasEvacuationKeyword = evacuationKeywords.some(k => lastAction.includes(k)) && !hasFloorKeyword;
   const hasPreparationKeyword = preparationKeywords.some(k => lastAction.includes(k));
   const isEvacuating = hasEvacuationKeyword && !hasPreparationKeyword;
@@ -682,12 +682,17 @@ function applySafetyRules(prev = {}, proposed = {}) {
   }
 
   if (t >= 5 && !hasSpecial) {
-    if (Math.random() < 0.9) {
-      s.jma.special.push('大雨特別警報');
-    } else {
-      s.jma.special = [];
-      if (s.jma.warnings.length === 0) {
-        s.jma.advisories.push('大雨注意報');
+    const rainWarnDuration = s._warnDuration?.RAIN || 0;
+    const windWarnDuration = s._warnDuration?.WIND || 0;
+    
+    if (rainWarnDuration >= 2 || windWarnDuration >= 2) {
+      if (Math.random() < 0.9) {
+        s.jma.special.push('大雨特別警報');
+      } else {
+        s.jma.special = [];
+        if (s.jma.warnings.length === 0) {
+          s.jma.advisories.push('大雨注意報');
+        }
       }
     }
   }
