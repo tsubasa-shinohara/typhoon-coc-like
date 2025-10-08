@@ -92,20 +92,6 @@ function applySafetyRules(prev = {}, proposed = {}) {
     s.currentFloor = maxFloors;
   }
 
-  const floorKeywords = ['階', '2階', '3階', '上階', '階段'];
-  const movementKeywords = ['移動', '避難', '上がる', '登る', '行く'];
-  const hasFloorKeyword = floorKeywords.some(k => lastAction.includes(k));
-  const hasMovementKeyword = movementKeywords.some(k => lastAction.includes(k));
-  
-  if (hasFloorKeyword && hasMovementKeyword) {
-    const attemptedFloor = lastAction.includes('3階') ? 3 : lastAction.includes('2階') ? 2 : null;
-    
-    if (attemptedFloor && attemptedFloor > maxFloors) {
-      if (!s.floorMovementFeedback) s.floorMovementFeedback = [];
-      s.floorMovementFeedback.push({ turn: s.turn, text: `この家に${attemptedFloor}階はなかった…。` });
-    }
-  }
-
   // JMA（注意報・警報・特別警報）
   if (u.jma && typeof u.jma === 'object') {
     s.jma = {
@@ -181,6 +167,22 @@ function applySafetyRules(prev = {}, proposed = {}) {
   // lastAction を最初に宣言（全体で使用）
   // ------------------------------------------------------------
   const lastAction = prev._lastAction || '';
+
+  // ------------------------------------------------------------
+  // ------------------------------------------------------------
+  const floorKeywords = ['階', '2階', '3階', '上階', '階段'];
+  const movementKeywords = ['移動', '避難', '上がる', '登る', '行く'];
+  const hasFloorKeyword = floorKeywords.some(k => lastAction.includes(k));
+  const hasMovementKeyword = movementKeywords.some(k => lastAction.includes(k));
+  
+  if (hasFloorKeyword && hasMovementKeyword) {
+    const attemptedFloor = lastAction.includes('3階') ? 3 : lastAction.includes('2階') ? 2 : null;
+    
+    if (attemptedFloor && attemptedFloor > maxFloors) {
+      if (!s.floorMovementFeedback) s.floorMovementFeedback = [];
+      s.floorMovementFeedback.push({ turn: s.turn, text: `この家に${attemptedFloor}階はなかった…。` });
+    }
+  }
 
   // ------------------------------------------------------------
   // proposed.evac の安全マージ（上書き事故を防止）
