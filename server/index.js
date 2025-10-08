@@ -891,7 +891,7 @@ app.post('/api/facilitator', async (req, res) => {
     const hasFloorKeyword = floorKeywords.some(k => lastAction.includes(k));
     const hasMovementKeyword = movementKeywords.some(k => lastAction.includes(k));
     
-    if (hasFloorKeyword && hasMovementKeyword) {
+    if (state && hasFloorKeyword && hasMovementKeyword) {
       const attemptedFloor = lastAction.includes('3階') ? 3 : lastAction.includes('2階') ? 2 : null;
       
       if (attemptedFloor && attemptedFloor > maxFloors) {
