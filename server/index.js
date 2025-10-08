@@ -128,7 +128,12 @@ function applySafetyRules(prev = {}, proposed = {}) {
     for (const f of u.familyLocations) {
       if (!f || !f.name) continue;
       const prevF = map.get(f.name) || { name: f.name, location: 'unknown' };
-      map.set(f.name, { ...prevF, ...f });
+      
+      const newLocation = (prevF.location === 'home' && f.location === 'unknown') 
+        ? 'home' 
+        : (f.location || prevF.location);
+      
+      map.set(f.name, { ...prevF, ...f, location: newLocation });
     }
     s.familyLocations = Array.from(map.values());
   }
@@ -173,6 +178,21 @@ function applySafetyRules(prev = {}, proposed = {}) {
   // lastAction を最初に宣言（全体で使用）
   // ------------------------------------------------------------
   const lastAction = prev._lastAction || '';
+
+  // ------------------------------------------------------------
+  // ------------------------------------------------------------
+  const neighborKeywords = ['声をかけ', '呼びかけ', '周囲', '近所', '周りに', '隣人', 'コンタクト', '声掛け'];
+  if (neighborKeywords.some(k => lastAction.includes(k))) {
+    s.neighborOutreach = true;
+  }
+
+  const routeKeywords = ['経路', 'ルート', '地図', 'マップ'];
+  const confirmKeywords = ['確認', 'チェック', '調べ'];
+  const hasRouteKeyword = routeKeywords.some(k => lastAction.includes(k));
+  const hasConfirmKeyword = confirmKeywords.some(k => lastAction.includes(k));
+  if (hasRouteKeyword && hasConfirmKeyword) {
+    s.routeConfirmed = true;
+  }
 
   // ------------------------------------------------------------
   // proposed.evac の安全マージ（上書き事故を防止）
