@@ -92,6 +92,20 @@ function applySafetyRules(prev = {}, proposed = {}) {
     s.currentFloor = maxFloors;
   }
 
+  const floorKeywords = ['階', '2階', '3階', '上階', '階段'];
+  const movementKeywords = ['移動', '避難', '上がる', '登る', '行く'];
+  const hasFloorKeyword = floorKeywords.some(k => lastAction.includes(k));
+  const hasMovementKeyword = movementKeywords.some(k => lastAction.includes(k));
+  
+  if (hasFloorKeyword && hasMovementKeyword) {
+    const attemptedFloor = lastAction.includes('3階') ? 3 : lastAction.includes('2階') ? 2 : null;
+    
+    if (attemptedFloor && attemptedFloor > maxFloors) {
+      if (!s.floorMovementFeedback) s.floorMovementFeedback = [];
+      s.floorMovementFeedback.push({ turn: s.turn, text: `この家に${attemptedFloor}階はなかった…。` });
+    }
+  }
+
   // JMA（注意報・警報・特別警報）
   if (u.jma && typeof u.jma === 'object') {
     s.jma = {
@@ -203,7 +217,7 @@ function applySafetyRules(prev = {}, proposed = {}) {
 
   // ------------------------------------------------------------
   // ------------------------------------------------------------
-  const evacuationKeywords = ['避難所', '避難', '移動', '向かう', '出発', '出る'];
+  const evacuationKeywords = ['避難所', '避難', '移動', '向かう', '出発', '出る', '目指す'];
   const preparationKeywords = ['準備', '用意', 'チェック', '確認'];
   const hasEvacuationKeyword = evacuationKeywords.some(k => lastAction.includes(k));
   const hasPreparationKeyword = preparationKeywords.some(k => lastAction.includes(k));
@@ -779,7 +793,10 @@ app.post('/api/facilitator', async (req, res) => {
       (lastRoll ? `\nd100=${lastRoll}` : '') +
       `\nシナリオ（家族・住宅・時間帯）: ${JSON.stringify(
         state?.scenario || {}
-      )}`;
+      )}` +
+      (state?.floorMovementFeedback?.length > 0 
+        ? `\n【重要な制約】: ${state.floorMovementFeedback.map(f => f.text).join(' ')}` 
+        : '');
 
     const r = await client.responses.create({
       model: 'gpt-4o-mini',
