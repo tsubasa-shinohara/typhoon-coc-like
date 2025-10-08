@@ -221,7 +221,7 @@ function applySafetyRules(prev = {}, proposed = {}) {
   // ------------------------------------------------------------
   const evacuationKeywords = ['避難所', '避難', '移動', '向かう', '出発', '出る', '目指す'];
   const preparationKeywords = ['準備', '用意', 'チェック', '確認'];
-  const hasEvacuationKeyword = evacuationKeywords.some(k => lastAction.includes(k));
+  const hasEvacuationKeyword = evacuationKeywords.some(k => lastAction.includes(k)) && !hasFloorKeyword;
   const hasPreparationKeyword = preparationKeywords.some(k => lastAction.includes(k));
   const isEvacuating = hasEvacuationKeyword && !hasPreparationKeyword;
   
