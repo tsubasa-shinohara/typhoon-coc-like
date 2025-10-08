@@ -779,10 +779,7 @@ app.post('/api/facilitator', async (req, res) => {
       (lastRoll ? `\nd100=${lastRoll}` : '') +
       `\nシナリオ（家族・住宅・時間帯）: ${JSON.stringify(
         state?.scenario || {}
-      )}` +
-      (state?.floorMovementFeedback?.length > 0 
-        ? `\n【重要な制約】: ${state.floorMovementFeedback.map(f => f.text).join(' ')}` 
-        : '');
+      )}`;
 
     const r = await client.responses.create({
       model: 'gpt-4o-mini',
@@ -898,6 +895,13 @@ app.post('/api/facilitator', async (req, res) => {
         if (!state.floorMovementFeedback) state.floorMovementFeedback = [];
         state.floorMovementFeedback.push({ turn: state.turn || 1, text: `この家に${attemptedFloor}階はなかった…。` });
       }
+    }
+
+    if (state?.floorMovementFeedback?.length > 0) {
+      const feedbackText = state.floorMovementFeedback
+        .map(f => f.text)
+        .join(' ');
+      safeNarr += `\n\nなお、${feedbackText}`;
     }
 
     let next = applySafetyRules(state || {}, updates);
