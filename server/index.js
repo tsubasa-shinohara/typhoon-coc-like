@@ -201,6 +201,10 @@ function applySafetyRules(prev = {}, proposed = {}) {
     }
   }
 
+  const floorKeywords = ['階', '2階', '3階', '上階', '階段'];
+  const hasFloorKeyword = floorKeywords.some(k => lastAction.includes(k));
+
+
   // ------------------------------------------------------------
   // ------------------------------------------------------------
   const evacuationKeywords = ['避難所', '避難', '移動', '向かう', '出発', '出る', '目指す'];
