@@ -1,0 +1,1144 @@
+{
+  "categories": [
+    "情報系",
+    "コミュニケーション系",
+    "物資準備系",
+    "住宅対策系",
+    "避難行動系",
+    "待機・時間調整系"
+  ],
+  "choices": [
+    {
+      "id": "info_001",
+      "category": "情報系",
+      "text": "気象庁の最新情報を確認する",
+      "availableWhen": {
+        "phases": ["T-24h", "T-12h", "T-6h", "T-3h"],
+        "alertLevels": ["なし", "注意報", "警報", "特別警報"],
+        "conditions": {
+          "requireItems": [],
+          "requireFlags": [],
+          "excludeEvacStatus": ["en_route"]
+        }
+      },
+      "weight": 2.0,
+      "rarity": "common",
+      "scoreDelta": {
+        "生存度": 1,
+        "判断力": 3,
+        "貢献度": 0,
+        "準備度": 2,
+        "文化度": 0
+      },
+      "effects": {
+        "setFlags": ["情報確認済み"],
+        "addItems": [],
+        "customEffect": null
+      },
+      "feedback": "最新の気象情報を確認しました。台風の進路と警報レベルを把握できました。"
+    },
+    {
+      "id": "info_002",
+      "category": "情報系",
+      "text": "地域の防災無線を聞く",
+      "availableWhen": {
+        "phases": ["T-24h", "T-12h", "T-6h", "T-3h"],
+        "alertLevels": ["注意報", "警報", "特別警報"],
+        "conditions": {
+          "requireItems": [],
+          "requireFlags": [],
+          "excludeEvacStatus": ["en_route"]
+        }
+      },
+      "weight": 1.5,
+      "rarity": "common",
+      "scoreDelta": {
+        "生存度": 2,
+        "判断力": 2,
+        "貢献度": 1,
+        "準備度": 1,
+        "文化度": 0
+      },
+      "effects": {
+        "setFlags": ["防災無線確認済み"],
+        "addItems": [],
+        "customEffect": null
+      },
+      "feedback": "防災無線から避難情報や注意喚起が流れています。地域の状況を把握しました。"
+    },
+    {
+      "id": "info_003",
+      "category": "情報系",
+      "text": "SNSで地域の被害情報を確認",
+      "availableWhen": {
+        "phases": ["T-12h", "T-6h", "T-3h", "T+6h"],
+        "alertLevels": ["なし", "注意報", "警報", "特別警報"],
+        "conditions": {
+          "requireItems": [],
+          "requireFlags": [],
+          "excludeEvacStatus": []
+        }
+      },
+      "weight": 1.2,
+      "rarity": "common",
+      "scoreDelta": {
+        "生存度": 0,
+        "判断力": 2,
+        "貢献度": 0,
+        "準備度": 1,
+        "文化度": 1
+      },
+      "effects": {
+        "setFlags": ["SNS確認済み"],
+        "addItems": [],
+        "customEffect": null
+      },
+      "feedback": "SNSで近隣の冠水や倒木の情報を確認しました。リアルタイムの状況がわかります。"
+    },
+    {
+      "id": "info_004",
+      "category": "情報系",
+      "text": "避難所の開設状況を確認",
+      "availableWhen": {
+        "phases": ["T-12h", "T-6h", "T-3h"],
+        "alertLevels": ["注意報", "警報", "特別警報"],
+        "conditions": {
+          "requireItems": [],
+          "requireFlags": [],
+          "excludeEvacStatus": ["en_route", "arrived"]
+        }
+      },
+      "weight": 1.8,
+      "rarity": "common",
+      "scoreDelta": {
+        "生存度": 2,
+        "判断力": 2,
+        "貢献度": 0,
+        "準備度": 3,
+        "文化度": 0
+      },
+      "effects": {
+        "setFlags": ["避難所確認済み"],
+        "addItems": [],
+        "customEffect": null
+      },
+      "feedback": "最寄りの避難所の場所と開設時間を確認しました。いつでも避難できる準備が整いました。"
+    },
+    {
+      "id": "info_005",
+      "category": "情報系",
+      "text": "ハザードマップを確認する",
+      "availableWhen": {
+        "phases": ["T-24h", "T-12h"],
+        "alertLevels": ["なし", "注意報"],
+        "conditions": {
+          "requireItems": [],
+          "requireFlags": [],
+          "excludeEvacStatus": []
+        }
+      },
+      "weight": 1.5,
+      "rarity": "common",
+      "scoreDelta": {
+        "生存度": 3,
+        "判断力": 3,
+        "貢献度": 0,
+        "準備度": 2,
+        "文化度": 0
+      },
+      "effects": {
+        "setFlags": ["ハザードマップ確認済み"],
+        "addItems": [],
+        "customEffect": null
+      },
+      "feedback": "自宅周辺の浸水想定区域や土砂災害警戒区域を確認しました。危険箇所を把握できました。"
+    },
+    {
+      "id": "comm_001",
+      "category": "コミュニケーション系",
+      "text": "家族の安否を確認する",
+      "availableWhen": {
+        "phases": ["T-24h", "T-12h", "T-6h", "T-3h", "T+6h"],
+        "alertLevels": ["なし", "注意報", "警報", "特別警報"],
+        "conditions": {
+          "requireItems": [],
+          "requireFlags": [],
+          "excludeEvacStatus": []
+        }
+      },
+      "weight": 2.5,
+      "rarity": "common",
+      "scoreDelta": {
+        "生存度": 1,
+        "判断力": 1,
+        "貢献度": 3,
+        "準備度": 0,
+        "文化度": 0
+      },
+      "effects": {
+        "setFlags": ["家族確認済み"],
+        "addItems": [],
+        "customEffect": "contact_family"
+      },
+      "feedback": "家族全員の所在と安全を確認しました。お互いの状況を共有できました。"
+    },
+    {
+      "id": "comm_002",
+      "category": "コミュニケーション系",
+      "text": "近隣住民に声をかける",
+      "availableWhen": {
+        "phases": ["T-24h", "T-12h", "T-6h"],
+        "alertLevels": ["なし", "注意報", "警報"],
+        "conditions": {
+          "requireItems": [],
+          "requireFlags": [],
+          "excludeEvacStatus": ["en_route", "arrived"]
+        }
+      },
+      "weight": 1.3,
+      "rarity": "common",
+      "scoreDelta": {
+        "生存度": 0,
+        "判断力": 1,
+        "貢献度": 4,
+        "準備度": 0,
+        "文化度": 1
+      },
+      "effects": {
+        "setFlags": ["近隣声掛け済み"],
+        "addItems": [],
+        "customEffect": null
+      },
+      "feedback": "近隣の高齢者世帯などに声をかけました。地域の助け合いの輪が広がります。"
+    },
+    {
+      "id": "comm_003",
+      "category": "コミュニケーション系",
+      "text": "避難経路を家族と確認",
+      "availableWhen": {
+        "phases": ["T-24h", "T-12h", "T-6h"],
+        "alertLevels": ["なし", "注意報", "警報"],
+        "conditions": {
+          "requireItems": [],
+          "requireFlags": ["家族確認済み"],
+          "excludeEvacStatus": ["en_route", "arrived"]
+        }
+      },
+      "weight": 1.8,
+      "rarity": "common",
+      "scoreDelta": {
+        "生存度": 3,
+        "判断力": 2,
+        "貢献度": 2,
+        "準備度": 3,
+        "文化度": 0
+      },
+      "effects": {
+        "setFlags": ["経路確認済み"],
+        "addItems": [],
+        "customEffect": null
+      },
+      "feedback": "家族と避難経路と集合場所を確認しました。いざという時に慌てずに済みます。"
+    },
+    {
+      "id": "comm_004",
+      "category": "コミュニケーション系",
+      "text": "災害伝言ダイヤルの使い方を確認",
+      "availableWhen": {
+        "phases": ["T-24h", "T-12h"],
+        "alertLevels": ["なし", "注意報"],
+        "conditions": {
+          "requireItems": [],
+          "requireFlags": [],
+          "excludeEvacStatus": []
+        }
+      },
+      "weight": 1.0,
+      "rarity": "common",
+      "scoreDelta": {
+        "生存度": 1,
+        "判断力": 2,
+        "貢献度": 1,
+        "準備度": 2,
+        "文化度": 0
+      },
+      "effects": {
+        "setFlags": ["伝言ダイヤル確認済み"],
+        "addItems": [],
+        "customEffect": null
+      },
+      "feedback": "171の使い方を家族と確認しました。通信途絶時の連絡手段を確保しました。"
+    },
+    {
+      "id": "comm_005",
+      "category": "コミュニケーション系",
+      "text": "自治会の避難呼びかけに協力",
+      "availableWhen": {
+        "phases": ["T-6h", "T-3h"],
+        "alertLevels": ["警報", "特別警報"],
+        "conditions": {
+          "requireItems": [],
+          "requireFlags": ["近隣声掛け済み"],
+          "excludeEvacStatus": ["en_route", "arrived"]
+        }
+      },
+      "weight": 0.8,
+      "rarity": "uncommon",
+      "scoreDelta": {
+        "生存度": -1,
+        "判断力": 2,
+        "貢献度": 5,
+        "準備度": 0,
+        "文化度": 2
+      },
+      "effects": {
+        "setFlags": ["避難呼びかけ協力済み"],
+        "addItems": [],
+        "customEffect": null
+      },
+      "feedback": "自治会と協力して避難の呼びかけを行いました。多くの人が避難を開始しています。"
+    },
+    {
+      "id": "supply_001",
+      "category": "物資準備系",
+      "text": "懐中電灯と予備電池を準備",
+      "availableWhen": {
+        "phases": ["T-24h", "T-12h"],
+        "alertLevels": ["なし", "注意報"],
+        "conditions": {
+          "requireItems": [],
+          "requireFlags": [],
+          "excludeEvacStatus": []
+        }
+      },
+      "weight": 2.0,
+      "rarity": "common",
+      "scoreDelta": {
+        "生存度": 2,
+        "判断力": 1,
+        "貢献度": 0,
+        "準備度": 3,
+        "文化度": 0
+      },
+      "effects": {
+        "setFlags": ["照明準備済み"],
+        "addItems": ["懐中電灯"],
+        "customEffect": null
+      },
+      "feedback": "懐中電灯と予備電池を準備しました。停電時でも安全に行動できます。"
+    },
+    {
+      "id": "supply_002",
+      "category": "物資準備系",
+      "text": "飲料水と非常食を確保",
+      "availableWhen": {
+        "phases": ["T-24h", "T-12h"],
+        "alertLevels": ["なし", "注意報", "警報"],
+        "conditions": {
+          "requireItems": [],
+          "requireFlags": [],
+          "excludeEvacStatus": []
+        }
+      },
+      "weight": 2.2,
+      "rarity": "common",
+      "scoreDelta": {
+        "生存度": 3,
+        "判断力": 1,
+        "貢献度": 0,
+        "準備度": 4,
+        "文化度": 0
+      },
+      "effects": {
+        "setFlags": ["食料確保済み"],
+        "addItems": ["飲料水", "非常食"],
+        "customEffect": null
+      },
+      "feedback": "3日分の飲料水と非常食を確保しました。長期戦にも備えられます。"
+    },
+    {
+      "id": "supply_003",
+      "category": "物資準備系",
+      "text": "携帯ラジオを準備する",
+      "availableWhen": {
+        "phases": ["T-24h", "T-12h"],
+        "alertLevels": ["なし", "注意報"],
+        "conditions": {
+          "requireItems": [],
+          "requireFlags": [],
+          "excludeEvacStatus": []
+        }
+      },
+      "weight": 1.5,
+      "rarity": "common",
+      "scoreDelta": {
+        "生存度": 1,
+        "判断力": 2,
+        "貢献度": 0,
+        "準備度": 3,
+        "文化度": 0
+      },
+      "effects": {
+        "setFlags": ["ラジオ準備済み"],
+        "addItems": ["携帯ラジオ"],
+        "customEffect": null
+      },
+      "feedback": "携帯ラジオを準備しました。停電時でも情報を得られます。"
+    },
+    {
+      "id": "supply_004",
+      "category": "物資準備系",
+      "text": "非常用持ち出し袋を準備",
+      "availableWhen": {
+        "phases": ["T-24h", "T-12h", "T-6h"],
+        "alertLevels": ["なし", "注意報", "警報"],
+        "conditions": {
+          "requireItems": [],
+          "requireFlags": [],
+          "excludeEvacStatus": []
+        }
+      },
+      "weight": 1.8,
+      "rarity": "common",
+      "scoreDelta": {
+        "生存度": 3,
+        "判断力": 2,
+        "貢献度": 0,
+        "準備度": 4,
+        "文化度": 0
+      },
+      "effects": {
+        "setFlags": ["持ち出し袋準備済み"],
+        "addItems": ["非常用持ち出し袋"],
+        "customEffect": null
+      },
+      "feedback": "非常用持ち出し袋を玄関に準備しました。いつでも避難できます。"
+    },
+    {
+      "id": "supply_005",
+      "category": "物資準備系",
+      "text": "モバイルバッテリーを充電",
+      "availableWhen": {
+        "phases": ["T-24h", "T-12h", "T-6h"],
+        "alertLevels": ["なし", "注意報", "警報"],
+        "conditions": {
+          "requireItems": [],
+          "requireFlags": [],
+          "excludeEvacStatus": []
+        }
+      },
+      "weight": 1.7,
+      "rarity": "common",
+      "scoreDelta": {
+        "生存度": 1,
+        "判断力": 1,
+        "貢献度": 0,
+        "準備度": 3,
+        "文化度": 1
+      },
+      "effects": {
+        "setFlags": ["バッテリー充電済み"],
+        "addItems": ["モバイルバッテリー"],
+        "customEffect": null
+      },
+      "feedback": "スマートフォンとモバイルバッテリーを満充電しました。情報収集と連絡手段を確保しました。"
+    },
+    {
+      "id": "supply_006",
+      "category": "物資準備系",
+      "text": "常備薬と救急セットを確認",
+      "availableWhen": {
+        "phases": ["T-24h", "T-12h"],
+        "alertLevels": ["なし", "注意報"],
+        "conditions": {
+          "requireItems": [],
+          "requireFlags": [],
+          "excludeEvacStatus": []
+        }
+      },
+      "weight": 1.3,
+      "rarity": "common",
+      "scoreDelta": {
+        "生存度": 2,
+        "判断力": 1,
+        "貢献度": 1,
+        "準備度": 2,
+        "文化度": 0
+      },
+      "effects": {
+        "setFlags": ["医薬品確認済み"],
+        "addItems": ["救急セット"],
+        "customEffect": null
+      },
+      "feedback": "常備薬と救急セットを確認しました。けがや体調不良に備えられます。"
+    },
+    {
+      "id": "supply_007",
+      "category": "物資準備系",
+      "text": "現金を用意する",
+      "availableWhen": {
+        "phases": ["T-24h", "T-12h"],
+        "alertLevels": ["なし", "注意報"],
+        "conditions": {
+          "requireItems": [],
+          "requireFlags": [],
+          "excludeEvacStatus": []
+        }
+      },
+      "weight": 1.0,
+      "rarity": "common",
+      "scoreDelta": {
+        "生存度": 1,
+        "判断力": 2,
+        "貢献度": 0,
+        "準備度": 2,
+        "文化度": 0
+      },
+      "effects": {
+        "setFlags": ["現金準備済み"],
+        "addItems": ["現金"],
+        "customEffect": null
+      },
+      "feedback": "停電時に備えて現金を用意しました。キャッシュレス決済が使えない時も安心です。"
+    },
+    {
+      "id": "house_001",
+      "category": "住宅対策系",
+      "text": "窓ガラスに飛散防止フィルム",
+      "availableWhen": {
+        "phases": ["T-24h", "T-12h"],
+        "alertLevels": ["なし", "注意報"],
+        "conditions": {
+          "requireItems": [],
+          "requireFlags": [],
+          "excludeEvacStatus": []
+        }
+      },
+      "weight": 1.5,
+      "rarity": "common",
+      "scoreDelta": {
+        "生存度": 3,
+        "判断力": 2,
+        "貢献度": 0,
+        "準備度": 2,
+        "文化度": 0
+      },
+      "effects": {
+        "setFlags": ["窓対策済み"],
+        "addItems": [],
+        "customEffect": null
+      },
+      "feedback": "窓ガラスに飛散防止フィルムを貼りました。割れても破片が飛び散りにくくなります。"
+    },
+    {
+      "id": "house_002",
+      "category": "住宅対策系",
+      "text": "雨戸・シャッターを閉める",
+      "availableWhen": {
+        "phases": ["T-12h", "T-6h", "T-3h"],
+        "alertLevels": ["注意報", "警報", "特別警報"],
+        "conditions": {
+          "requireItems": [],
+          "requireFlags": [],
+          "excludeEvacStatus": []
+        }
+      },
+      "weight": 2.0,
+      "rarity": "common",
+      "scoreDelta": {
+        "生存度": 2,
+        "判断力": 1,
+        "貢献度": 0,
+        "準備度": 2,
+        "文化度": 0
+      },
+      "effects": {
+        "setFlags": ["雨戸閉鎖済み"],
+        "addItems": [],
+        "customEffect": null
+      },
+      "feedback": "全ての雨戸とシャッターを閉めました。強風から窓を守ります。"
+    },
+    {
+      "id": "house_003",
+      "category": "住宅対策系",
+      "text": "排水溝や側溝を掃除",
+      "availableWhen": {
+        "phases": ["T-24h", "T-12h"],
+        "alertLevels": ["なし", "注意報"],
+        "conditions": {
+          "requireItems": [],
+          "requireFlags": [],
+          "excludeEvacStatus": []
+        }
+      },
+      "weight": 1.2,
+      "rarity": "common",
+      "scoreDelta": {
+        "生存度": 2,
+        "判断力": 2,
+        "貢献度": 1,
+        "準備度": 2,
+        "文化度": 0
+      },
+      "effects": {
+        "setFlags": ["排水対策済み"],
+        "addItems": [],
+        "customEffect": null
+      },
+      "feedback": "家の周りの排水溝や側溝を掃除しました。浸水のリスクを減らせます。"
+    },
+    {
+      "id": "house_004",
+      "category": "住宅対策系",
+      "text": "浴槽に水を溜める",
+      "availableWhen": {
+        "phases": ["T-12h", "T-6h"],
+        "alertLevels": ["注意報", "警報"],
+        "conditions": {
+          "requireItems": [],
+          "requireFlags": [],
+          "excludeEvacStatus": []
+        }
+      },
+      "weight": 1.8,
+      "rarity": "common",
+      "scoreDelta": {
+        "生存度": 2,
+        "判断力": 2,
+        "貢献度": 0,
+        "準備度": 3,
+        "文化度": 0
+      },
+      "effects": {
+        "setFlags": ["生活用水確保済み"],
+        "addItems": [],
+        "customEffect": null
+      },
+      "feedback": "浴槽に水を溜めました。断水時のトイレや洗濯に使えます。"
+    },
+    {
+      "id": "house_005",
+      "category": "住宅対策系",
+      "text": "家具を固定・転倒防止",
+      "availableWhen": {
+        "phases": ["T-24h"],
+        "alertLevels": ["なし"],
+        "conditions": {
+          "requireItems": [],
+          "requireFlags": [],
+          "excludeEvacStatus": []
+        }
+      },
+      "weight": 1.0,
+      "rarity": "common",
+      "scoreDelta": {
+        "生存度": 2,
+        "判断力": 1,
+        "貢献度": 0,
+        "準備度": 2,
+        "文化度": 0
+      },
+      "effects": {
+        "setFlags": ["家具固定済み"],
+        "addItems": [],
+        "customEffect": null
+      },
+      "feedback": "大型家具を固定しました。強風による転倒を防ぎます。"
+    },
+    {
+      "id": "house_006",
+      "category": "住宅対策系",
+      "text": "2階以上に避難する",
+      "availableWhen": {
+        "phases": ["T-6h", "T-3h"],
+        "alertLevels": ["警報", "特別警報"],
+        "conditions": {
+          "requireItems": [],
+          "requireFlags": [],
+          "excludeEvacStatus": ["arrived"],
+          "requireHouseFloors": 2
+        }
+      },
+      "weight": 2.0,
+      "rarity": "common",
+      "scoreDelta": {
+        "生存度": 4,
+        "判断力": 3,
+        "貢献度": 0,
+        "準備度": 1,
+        "文化度": 0
+      },
+      "effects": {
+        "setFlags": ["垂直避難済み"],
+        "addItems": [],
+        "customEffect": "vertical_evacuation"
+      },
+      "feedback": "家族全員で2階に避難しました。浸水が始まっても安全な高さです。"
+    },
+    {
+      "id": "evac_001",
+      "category": "避難行動系",
+      "text": "避難所へ徒歩で向かう",
+      "availableWhen": {
+        "phases": ["T-12h", "T-6h", "T-3h"],
+        "alertLevels": ["注意報", "警報", "特別警報"],
+        "conditions": {
+          "requireItems": [],
+          "requireFlags": [],
+          "excludeEvacStatus": ["en_route", "arrived"]
+        }
+      },
+      "weight": 2.5,
+      "rarity": "common",
+      "scoreDelta": {
+        "生存度": 4,
+        "判断力": 3,
+        "貢献度": 0,
+        "準備度": 0,
+        "文化度": 0
+      },
+      "effects": {
+        "setFlags": ["避難開始"],
+        "addItems": [],
+        "customEffect": "start_evacuation"
+      },
+      "feedback": "避難所に向けて徒歩で出発しました。明るいうちに移動できます。"
+    },
+    {
+      "id": "evac_002",
+      "category": "避難行動系",
+      "text": "近隣の人と一緒に避難",
+      "availableWhen": {
+        "phases": ["T-12h", "T-6h", "T-3h"],
+        "alertLevels": ["警報", "特別警報"],
+        "conditions": {
+          "requireItems": [],
+          "requireFlags": ["近隣声掛け済み"],
+          "excludeEvacStatus": ["en_route", "arrived"]
+        }
+      },
+      "weight": 1.5,
+      "rarity": "uncommon",
+      "scoreDelta": {
+        "生存度": 4,
+        "判断力": 2,
+        "貢献度": 4,
+        "準備度": 0,
+        "文化度": 1
+      },
+      "effects": {
+        "setFlags": ["避難開始", "共同避難"],
+        "addItems": [],
+        "customEffect": "group_evacuation"
+      },
+      "feedback": "近隣の方々と声を掛け合いながら避難所に向かいます。お互いを支え合えます。"
+    },
+    {
+      "id": "evac_003",
+      "category": "避難行動系",
+      "text": "車で避難する",
+      "availableWhen": {
+        "phases": ["T-12h", "T-6h"],
+        "alertLevels": ["注意報", "警報"],
+        "conditions": {
+          "requireItems": [],
+          "requireFlags": [],
+          "excludeEvacStatus": ["en_route", "arrived"]
+        }
+      },
+      "weight": 1.2,
+      "rarity": "common",
+      "scoreDelta": {
+        "生存度": 2,
+        "判断力": -1,
+        "貢献度": 0,
+        "準備度": 0,
+        "文化度": 0
+      },
+      "effects": {
+        "setFlags": ["避難開始", "車使用"],
+        "addItems": [],
+        "customEffect": "car_evacuation"
+      },
+      "feedback": "車で避難所に向かいます。渋滞や冠水に注意が必要です。"
+    },
+    {
+      "id": "evac_004",
+      "category": "避難行動系",
+      "text": "高齢者を手助けして避難",
+      "availableWhen": {
+        "phases": ["T-6h", "T-3h"],
+        "alertLevels": ["警報", "特別警報"],
+        "conditions": {
+          "requireItems": [],
+          "requireFlags": ["近隣声掛け済み"],
+          "excludeEvacStatus": ["en_route", "arrived"]
+        }
+      },
+      "weight": 0.8,
+      "rarity": "uncommon",
+      "scoreDelta": {
+        "生存度": 3,
+        "判断力": 2,
+        "貢献度": 5,
+        "準備度": 0,
+        "文化度": 2
+      },
+      "effects": {
+        "setFlags": ["避難開始", "高齢者支援"],
+        "addItems": [],
+        "customEffect": "help_elderly"
+      },
+      "feedback": "近隣の高齢者の方を手助けしながら避難します。時間はかかりますが、大切な命を守れます。"
+    },
+    {
+      "id": "evac_005",
+      "category": "避難行動系",
+      "text": "ペットと一緒に避難",
+      "availableWhen": {
+        "phases": ["T-12h", "T-6h"],
+        "alertLevels": ["注意報", "警報"],
+        "conditions": {
+          "requireItems": ["非常用持ち出し袋"],
+          "requireFlags": [],
+          "excludeEvacStatus": ["en_route", "arrived"]
+        }
+      },
+      "weight": 1.0,
+      "rarity": "common",
+      "scoreDelta": {
+        "生存度": 3,
+        "判断力": 2,
+        "貢献度": 0,
+        "準備度": 1,
+        "文化度": 2
+      },
+      "effects": {
+        "setFlags": ["避難開始", "ペット同伴"],
+        "addItems": [],
+        "customEffect": "pet_evacuation"
+      },
+      "feedback": "ペットと一緒に避難所に向かいます。家族全員が安全です。"
+    },
+    {
+      "id": "wait_001",
+      "category": "待機・時間調整系",
+      "text": "自宅で待機する",
+      "availableWhen": {
+        "phases": ["T-24h", "T-12h", "T-6h", "T-3h"],
+        "alertLevels": ["なし", "注意報"],
+        "conditions": {
+          "requireItems": [],
+          "requireFlags": [],
+          "excludeEvacStatus": ["en_route", "arrived"]
+        }
+      },
+      "weight": 1.5,
+      "rarity": "common",
+      "scoreDelta": {
+        "生存度": 0,
+        "判断力": 0,
+        "貢献度": 0,
+        "準備度": 0,
+        "文化度": 0
+      },
+      "effects": {
+        "setFlags": [],
+        "addItems": [],
+        "customEffect": null
+      },
+      "feedback": "自宅で待機します。状況を見守りながら次の行動を考えます。"
+    },
+    {
+      "id": "wait_002",
+      "category": "待機・時間調整系",
+      "text": "家族と今後の行動を相談",
+      "availableWhen": {
+        "phases": ["T-24h", "T-12h", "T-6h"],
+        "alertLevels": ["なし", "注意報", "警報"],
+        "conditions": {
+          "requireItems": [],
+          "requireFlags": ["家族確認済み"],
+          "excludeEvacStatus": ["en_route"]
+        }
+      },
+      "weight": 1.3,
+      "rarity": "common",
+      "scoreDelta": {
+        "生存度": 0,
+        "判断力": 2,
+        "貢献度": 2,
+        "準備度": 1,
+        "文化度": 0
+      },
+      "effects": {
+        "setFlags": ["行動計画済み"],
+        "addItems": [],
+        "customEffect": null
+      },
+      "feedback": "家族と今後の行動計画を話し合いました。全員の意思を確認できました。"
+    },
+    {
+      "id": "wait_003",
+      "category": "待機・時間調整系",
+      "text": "休息を取る",
+      "availableWhen": {
+        "phases": ["T-24h", "T-12h", "T-6h"],
+        "alertLevels": ["なし", "注意報"],
+        "conditions": {
+          "requireItems": [],
+          "requireFlags": [],
+          "excludeEvacStatus": ["en_route"]
+        }
+      },
+      "weight": 1.0,
+      "rarity": "common",
+      "scoreDelta": {
+        "生存度": 1,
+        "判断力": 0,
+        "貢献度": 0,
+        "準備度": 0,
+        "文化度": 0
+      },
+      "effects": {
+        "setFlags": ["休息済み"],
+        "addItems": [],
+        "customEffect": null
+      },
+      "feedback": "体力を温存するため休息を取りました。長期戦に備えます。"
+    },
+    {
+      "id": "wait_004",
+      "category": "待機・時間調整系",
+      "text": "状況を見守る",
+      "availableWhen": {
+        "phases": ["T-24h", "T-12h", "T-6h", "T-3h", "T+6h"],
+        "alertLevels": ["なし", "注意報", "警報", "特別警報"],
+        "conditions": {
+          "requireItems": [],
+          "requireFlags": [],
+          "excludeEvacStatus": []
+        }
+      },
+      "weight": 1.2,
+      "rarity": "common",
+      "scoreDelta": {
+        "生存度": 0,
+        "判断力": 1,
+        "貢献度": 0,
+        "準備度": 0,
+        "文化度": 0
+      },
+      "effects": {
+        "setFlags": [],
+        "addItems": [],
+        "customEffect": null
+      },
+      "feedback": "周囲の状況を注意深く観察します。変化に素早く対応できます。"
+    },
+    {
+      "id": "wait_005",
+      "category": "待機・時間調整系",
+      "text": "窓から外を確認",
+      "availableWhen": {
+        "phases": ["T-12h", "T-6h", "T-3h", "T+6h"],
+        "alertLevels": ["注意報", "警報", "特別警報", "なし"],
+        "conditions": {
+          "requireItems": [],
+          "requireFlags": [],
+          "excludeEvacStatus": ["en_route"]
+        }
+      },
+      "weight": 1.4,
+      "rarity": "common",
+      "scoreDelta": {
+        "生存度": 0,
+        "判断力": 1,
+        "貢献度": 0,
+        "準備度": 0,
+        "文化度": 0
+      },
+      "effects": {
+        "setFlags": ["外確認済み"],
+        "addItems": [],
+        "customEffect": null
+      },
+      "feedback": "窓から外の様子を確認しました。風雨の強さや道路の状況を把握できました。"
+    },
+    {
+      "id": "legendary_001",
+      "category": "待機・時間調整系",
+      "text": "コロッケを買いに行く",
+      "availableWhen": {
+        "phases": ["T-24h", "T-12h"],
+        "alertLevels": ["なし", "注意報"],
+        "conditions": {
+          "requireItems": [],
+          "requireFlags": [],
+          "excludeEvacStatus": []
+        }
+      },
+      "weight": 0.3,
+      "rarity": "legendary",
+      "scoreDelta": {
+        "生存度": 0,
+        "判断力": -1,
+        "貢献度": 0,
+        "準備度": 0,
+        "文化度": 5
+      },
+      "effects": {
+        "setFlags": ["コロッケ購入済み"],
+        "addItems": ["コロッケ"],
+        "customEffect": null
+      },
+      "feedback": "台風前の定番、コロッケを買いに行きました。なぜか台風の日はコロッケが食べたくなるものです。"
+    },
+    {
+      "id": "legendary_002",
+      "category": "情報系",
+      "text": "神社で安全祈願する",
+      "availableWhen": {
+        "phases": ["T-24h"],
+        "alertLevels": ["なし"],
+        "conditions": {
+          "requireItems": [],
+          "requireFlags": [],
+          "excludeEvacStatus": []
+        }
+      },
+      "weight": 0.2,
+      "rarity": "legendary",
+      "scoreDelta": {
+        "生存度": 0,
+        "判断力": 0,
+        "貢献度": 0,
+        "準備度": 0,
+        "文化度": 4
+      },
+      "effects": {
+        "setFlags": ["神社参拝済み"],
+        "addItems": [],
+        "customEffect": null
+      },
+      "feedback": "地域の神社で家族の安全を祈願しました。気持ちが落ち着きます。"
+    },
+    {
+      "id": "legendary_003",
+      "category": "コミュニケーション系",
+      "text": "龍使いに連絡する",
+      "availableWhen": {
+        "phases": ["T-12h"],
+        "alertLevels": ["特別警報"],
+        "conditions": {
+          "requireItems": ["コロッケ"],
+          "requireFlags": ["神社参拝済み"],
+          "excludeEvacStatus": []
+        }
+      },
+      "weight": 0.05,
+      "rarity": "legendary",
+      "scoreDelta": {
+        "生存度": 0,
+        "判断力": 0,
+        "貢献度": 0,
+        "準備度": 0,
+        "文化度": 10
+      },
+      "effects": {
+        "setFlags": ["龍使い接触"],
+        "addItems": [],
+        "customEffect": "dragon_summoner"
+      },
+      "feedback": "伝説の龍使いに連絡を取りました。『今回は龍の機嫌が悪いようだ...』でも少し台風の勢力が弱まった気がします。"
+    },
+    {
+      "id": "legendary_004",
+      "category": "物資準備系",
+      "text": "大量の養生テープを買い占める",
+      "availableWhen": {
+        "phases": ["T-24h"],
+        "alertLevels": ["なし"],
+        "conditions": {
+          "requireItems": [],
+          "requireFlags": [],
+          "excludeEvacStatus": []
+        }
+      },
+      "weight": 0.4,
+      "rarity": "rare",
+      "scoreDelta": {
+        "生存度": 1,
+        "判断力": -2,
+        "貢献度": -3,
+        "準備度": 2,
+        "文化度": 2
+      },
+      "effects": {
+        "setFlags": ["養生テープ買い占め"],
+        "addItems": ["養生テープ"],
+        "customEffect": null
+      },
+      "feedback": "ホームセンターで養生テープを大量購入しました。窓に×印を貼るのは実は効果が限定的ですが、やった気になります。他の人が買えなくなるのは問題ですね..."
+    },
+    {
+      "id": "legendary_005",
+      "category": "待機・時間調整系",
+      "text": "台風実況配信を見る",
+      "availableWhen": {
+        "phases": ["T-6h", "T-3h"],
+        "alertLevels": ["警報", "特別警報"],
+        "conditions": {
+          "requireItems": [],
+          "requireFlags": [],
+          "excludeEvacStatus": ["en_route"]
+        }
+      },
+      "weight": 0.5,
+      "rarity": "rare",
+      "scoreDelta": {
+        "生存度": -1,
+        "判断力": -1,
+        "貢献度": 0,
+        "準備度": 0,
+        "文化度": 3
+      },
+      "effects": {
+        "setFlags": ["配信視聴"],
+        "addItems": [],
+        "customEffect": null
+      },
+      "feedback": "SNSで台風実況配信を見ています。臨場感はありますが、本来やるべき準備に時間を使うべきでしょう..."
+    },
+    {
+      "id": "legendary_006",
+      "category": "情報系",
+      "text": "台風の目を探しに外に出る",
+      "availableWhen": {
+        "phases": ["T-3h"],
+        "alertLevels": ["特別警報"],
+        "conditions": {
+          "requireItems": [],
+          "requireFlags": [],
+          "excludeEvacStatus": []
+        }
+      },
+      "weight": 0.1,
+      "rarity": "legendary",
+      "scoreDelta": {
+        "生存度": -5,
+        "判断力": -5,
+        "貢献度": 0,
+        "準備度": 0,
+        "文化度": 5
+      },
+      "effects": {
+        "setFlags": ["台風の目探索"],
+        "addItems": [],
+        "customEffect": "typhoon_eye_search"
+      },
+      "feedback": "特別警報発令中に外に出るのは極めて危険です！飛来物や冠水で命の危険があります。絶対に真似しないでください！"
+    }
+  ]
+}
