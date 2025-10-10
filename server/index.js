@@ -907,38 +907,10 @@ const SYSTEM = `
 // ---------- API ----------
 app.post('/api/facilitator', async (req, res) => {
   try {
-    const { messages, lastRoll, state, selectedChoiceId } = req.body;
-    const payload = { messages, lastRoll, state, dramaMode };
+    const { messages, state, selectedChoiceId } = req.body;
 
-    const systemPlus =
-      SYSTEM +
-      (lastRoll ? `\nd100=${lastRoll}` : '') +
-      `\nシナリオ（家族・住宅・時間帯）: ${JSON.stringify(
-        state?.scenario || {}
-      )}`;
-
-    const r = await client.responses.create({
-      model: 'gpt-4o-mini',
-      input: [
-        { role: 'system', content: systemPlus },
-        { role: 'user', content: JSON.stringify(payload) },
-      ],
-    });
-
-    let out = (r.output_text || '').trim();
-    let data = null;
-    if (out.startsWith('{')) {
-      try {
-        data = JSON.parse(out);
-      } catch { }
-    }
-    if (!data) {
-      const m = out.match(/\{[\s\S]*\}$/);
-      if (m) {
-        try {
-          data = JSON.parse(m[0]);
-        } catch { }
-      }
+    if (!selectedChoiceId) {
+      return res.status(400).json({ error: '選択肢を選んでください' });
     }
 
     let selectedChoice = null;
@@ -976,44 +948,9 @@ app.post('/api/facilitator', async (req, res) => {
       });
     }
     
-    let safeNarr = '';
+    let safeNarr = '時間が過ぎていく。';
     if (selectedChoice) {
-      const currentPhase = PHASES[next.currentPhase] || PHASES[0];
-      const narrationPrompt = `あなたは台風災害シミュレーションゲームのナレーターです。
-
-現在の状況:
-- フェーズ: ${currentPhase.name}
-- ターン: ${next.turnInPhase}/3
-- 警報レベル: ${next.phaseAlertLevel || 'なし'}
-- 避難状態: ${next.evac?.status || 'none'}
-
-プレイヤーの行動: ${selectedChoice.text}
-
-30〜120字の短い情景描写を生成してください。音、匂い、光、家族の表情など感覚的な描写を含めてください。
-助言や結論は含めないでください。
-
-JSON形式で返してください:
-{
-  "narration": "ここに描写"
-}`;
-
-      try {
-        const r = await client.responses.create({
-          model: 'gpt-4o-mini',
-          input: [
-            { role: 'user', content: narrationPrompt }
-          ],
-        });
-
-        const output = (r.output_text || '').trim();
-        const narrationData = JSON.parse(output);
-        safeNarr = narrationData?.narration || selectedChoice.feedback;
-      } catch (err) {
-        console.error('AI応答エラー:', err);
-        safeNarr = selectedChoice.feedback || '風がうなり、家は小さく軋む。';
-      }
-    } else {
-      safeNarr = '風がうなり、家は小さく軋む。暗がりの中、鼓動が早まる。';
+      safeNarr = selectedChoice.feedback || selectedChoice.text;
     }
     
     if (next.specialEvent) {
