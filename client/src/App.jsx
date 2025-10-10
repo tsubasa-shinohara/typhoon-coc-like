@@ -78,8 +78,13 @@ export default function App() {
 
     // ② 状態
     const [messages, setMessages] = useState([]);
+    const [phaseInfo, setPhaseInfo] = useState(null);
     const [state, setState] = useState({
         turn: 1,
+        currentPhase: 0,
+        turnInPhase: 1,
+        totalTurns: 0,
+        phaseAlertLevel: 'なし',
         powerOutage: false,
         mobileSignal: '通話可',
         floodLevel: 'none',
@@ -92,7 +97,7 @@ export default function App() {
         alertReceived: false,
         alertType: 'なし',
         phase: 'ongoing',
-        scores: { safety: 0, compassion: 0, composure: 0 },
+        scores: { 生存度: 50, 判断力: 50, 貢献度: 50, 準備度: 50, 文化度: 50 },
         story: [],
         finalReport: null,
         scenario: null,
@@ -104,6 +109,8 @@ export default function App() {
         carUse: false,
         neighborOutreach: false,
         routeConfirmed: false,
+        items: [],
+        flags: [],
         _choices: null,
     });
 
@@ -122,6 +129,10 @@ export default function App() {
         
         const initialState = {
             turn: 1,
+            currentPhase: 0,
+            turnInPhase: 1,
+            totalTurns: 0,
+            phaseAlertLevel: 'なし',
             powerOutage: false,
             mobileSignal: '通話可',
             floodLevel: 'none',
@@ -134,7 +145,7 @@ export default function App() {
             alertReceived: false,
             alertType: 'なし',
             phase: 'ongoing',
-            scores: { safety: 0, compassion: 0, composure: 0 },
+            scores: { 生存度: 50, 判断力: 50, 貢献度: 50, 準備度: 50, 文化度: 50 },
             story: [],
             finalReport: null,
             scenario: scenario,
@@ -146,6 +157,8 @@ export default function App() {
             carUse: false,
             neighborOutreach: false,
             routeConfirmed: false,
+            items: [],
+            flags: [],
             _choices: null,
         };
         
@@ -158,10 +171,20 @@ export default function App() {
                     messages: [{ role: 'assistant', content: intro }],
                     lastRoll: null,
                     state: initialState,
+                    selectedChoiceId: null,
                 });
-                const { choices } = res.data;
+                const { narration, choices, state: newState, phaseInfo: newPhaseInfo } = res.data;
                 if (choices) {
                     setState((s) => ({ ...s, _choices: choices }));
+                }
+                if (newState) {
+                    setState(newState);
+                }
+                if (newPhaseInfo) {
+                    setPhaseInfo(newPhaseInfo);
+                }
+                if (narration) {
+                    setMessages([{ role: 'assistant', content: intro }, { role: 'assistant', content: narration }]);
                 }
             } catch (e) {
                 console.error('Failed to fetch initial choices:', e);
@@ -170,26 +193,61 @@ export default function App() {
     }, [scenario]);
 
     // ④ 送信
-    const send = async (contentOverride) => {
+    const send = async (choiceIdOrText) => {
         const r = autoRoll ? roll() : null;
-        const content = (contentOverride ?? input)?.trim() || '（無言）';
+        
+        let selectedChoiceId = null;
+        let content = '';
+        
+        if (typeof choiceIdOrText === 'string' && choiceIdOrText.trim()) {
+            const choice = state._choices?.find(c => c.id === choiceIdOrText || c.text === choiceIdOrText);
+            if (choice) {
+                selectedChoiceId = choice.id;
+                content = choice.text;
+            } else {
+                content = choiceIdOrText;
+            }
+        } else if (typeof choiceIdOrText === 'object' && choiceIdOrText?.id) {
+            selectedChoiceId = choiceIdOrText.id;
+            content = choiceIdOrText.text;
+        }
+
+        if (!content && !selectedChoiceId) {
+            content = input?.trim() || '（無言）';
+        }
 
         const userMsg = { role: 'user', content };
         const newMessages = [...messages, userMsg];
         setMessages(newMessages);
-        setInput('');                   // 入力欄は空にする
-        setState(s => ({ ...s, _choices: null }));  // 送信したら選択肢は一旦消す
+        setInput('');
+        setState(s => ({ ...s, _choices: null }));
 
         try {
             const res = await axios.post('http://localhost:8787/api/facilitator', {
                 messages: newMessages,
                 lastRoll: r,
                 state: { ...state, scenario },
+                selectedChoiceId,
             });
-            const { text, newState, choices } = res.data;
-            setMessages((m) => [...m, { role: 'assistant', content: text }]);
-            if (newState) setState((s) => ({ ...newState, _choices: choices || null }));
+            const { narration, choices, state: newState, phaseInfo: newPhaseInfo, finalReport } = res.data;
+            
+            if (narration) {
+                setMessages((m) => [...m, { role: 'assistant', content: narration }]);
+            }
+            
+            if (newState) {
+                setState({ ...newState, _choices: choices || null });
+            }
+            
+            if (newPhaseInfo) {
+                setPhaseInfo(newPhaseInfo);
+            }
+            
+            if (finalReport) {
+                setState((s) => ({ ...s, finalReport }));
+            }
         } catch (e) {
+            console.error('送信エラー:', e);
             setMessages((m) => [...m, { role: 'assistant', content: '（サーバに接続できませんでした）' }]);
         } finally {
             setTimeout(() => logRef.current?.scrollTo(0, logRef.current.scrollHeight), 0);
@@ -380,28 +438,33 @@ export default function App() {
                     </ul>
                 </div>
 
-                <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginBottom: 12 }}>
-                    <Badge color="green">{`Safety: ${r.scores.safety}`}</Badge>
-                    <Badge color="orange">{`Compassion: ${r.scores.compassion}`}</Badge>
-                    <Badge color="blue">{`Composure: ${r.scores.composure}`}</Badge>
+                <div style={{ padding: 14, border: '1px solid #ddd', borderRadius: 10, background: '#fff', marginBottom: 12 }}>
+                    <h3 style={{ marginTop: 0 }}>最終評価: {r.rank}</h3>
+                    <div style={{ fontSize: 24, fontWeight: 'bold', color: '#4A90E2', marginBottom: 12 }}>
+                        総合得点: {r.totalScore}点
+                    </div>
+                    
+                    <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginBottom: 12 }}>
+                        <Badge color="red">{`生存度: ${r.scores.生存度}/100`}</Badge>
+                        <Badge color="blue">{`判断力: ${r.scores.判断力}/100`}</Badge>
+                        <Badge color="orange">{`準備度: ${r.scores.準備度}/100`}</Badge>
+                        <Badge color="green">{`貢献度: ${r.scores.貢献度}/100`}</Badge>
+                        <Badge color="purple">{`文化度: ${r.scores.文化度}/100`}</Badge>
+                    </div>
+                    
+                    <div style={{ fontSize: 12, color: '#777', marginTop: 8 }}>
+                        重み付けスコア: 生存度×35% + 判断力×25% + 準備度×20% + 貢献度×15% + 文化度×5%
+                    </div>
                 </div>
 
-                {r.personality && (
-                    <div style={{ padding: 14, border: '1px solid #ddd', borderRadius: 10, background: '#fff', marginTop: 12 }}>
-                        <h3 style={{ marginTop: 0 }}>タイプ診断：{r.personality.label}</h3>
-                        <p style={{ margin: 0, color: '#333' }}>{r.personality.blurb}</p>
-                    </div>
-                )}
+                <div style={{ padding: 14, border: '1px solid #ddd', borderRadius: 10, background: '#fff', marginBottom: 12 }}>
+                    <h3 style={{ marginTop: 0 }}>評価コメント</h3>
+                    <p style={{ whiteSpace: 'pre-wrap', lineHeight: 1.6 }}>{r.report}</p>
+                </div>
 
                 <div style={{ padding: 14, border: '1px solid #ddd', borderRadius: 10, background: '#fff' }}>
-                    <h3 style={{ marginTop: 0 }}>フィードバック</h3>
-                    <ul style={{ marginTop: 8 }}>
-                        {r.advice.map((t, i) => (
-                            <li key={i} style={{ marginBottom: 6 }}>
-                                {t}
-                            </li>
-                        ))}
-                    </ul>
+                    <h3 style={{ marginTop: 0 }}>次回へのアドバイス</h3>
+                    <p style={{ whiteSpace: 'pre-wrap', lineHeight: 1.6 }}>{r.advice}</p>
                 </div>
             </div>
         );
@@ -451,18 +514,36 @@ export default function App() {
                 {state.phase === 'clearing' && <Badge color="blue">警戒解除フェーズ（次で終了）</Badge>}
             </div>
 
-            {/* スコアゲージ */}
-            <div style={{ display: 'flex', gap: 10, alignItems: 'center', margin: '8px 0 12px' }}>
-                {['safety', 'compassion', 'composure'].map((k) => {
-                    const v = state.scores?.[k] ?? 0; // -∞〜+∞ / 見た目は -5〜+5 でクリップ
-                    const pct = Math.max(0, Math.min(100, ((v + 5) / 10) * 100));
-                    const label = { safety: 'Safety', compassion: 'Compassion', composure: 'Composure' }[k];
+            {/* フェーズ情報 */}
+            {phaseInfo && (
+                <div style={{ padding: 10, border: '2px solid #4A90E2', borderRadius: 8, background: '#E3F2FD', marginBottom: 10, fontSize: 14 }}>
+                    <strong>{phaseInfo.phaseName}</strong> - ターン {phaseInfo.turnInPhase}/3 (総ターン: {phaseInfo.totalTurns})
+                    {phaseInfo.alertLevel && phaseInfo.alertLevel !== 'なし' && (
+                        <span style={{ marginLeft: 10, color: '#d32f2f' }}>【{phaseInfo.alertLevel}】</span>
+                    )}
+                </div>
+            )}
+
+            {/* スコアゲージ (5軸) */}
+            <div style={{ display: 'flex', gap: 10, alignItems: 'center', margin: '8px 0 12px', flexWrap: 'wrap' }}>
+                {[
+                    { key: '生存度', label: '生存度', weight: 35 },
+                    { key: '判断力', label: '判断力', weight: 25 },
+                    { key: '準備度', label: '準備度', weight: 20 },
+                    { key: '貢献度', label: '貢献度', weight: 15 },
+                    { key: '文化度', label: '文化度', weight: 5 }
+                ].map(({ key, label, weight }) => {
+                    const v = state.scores?.[key] ?? 50;
+                    const pct = Math.max(0, Math.min(100, v));
                     return (
-                        <div key={k} style={{ flex: 1 }}>
-                            <div style={{ fontSize: 12, marginBottom: 4, color: '#555' }}>{label}</div>
+                        <div key={key} style={{ flex: 1, minWidth: 120 }}>
+                            <div style={{ fontSize: 12, marginBottom: 4, color: '#555' }}>
+                                {label} ({weight}%)
+                            </div>
                             <div style={{ height: 8, background: '#eee', borderRadius: 8, overflow: 'hidden' }}>
                                 <div style={{ width: `${pct}%`, height: '100%', background: '#8ABEF5' }} />
                             </div>
+                            <div style={{ fontSize: 11, color: '#777', marginTop: 2 }}>{v}/100</div>
                         </div>
                     );
                 })}
@@ -493,17 +574,44 @@ export default function App() {
 
             {/* 選択肢パネル（AIが返したら表示） */}
             {Array.isArray(state._choices) && state._choices.length > 0 && (
-                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', margin: '8px 0' }}>
-                    {state._choices.map((c, i) => (
-                        <button
-                            key={i}
-                            onClick={() => send(c)}  // ← ここを一行だけ変更
-                            style={{ padding: '8px 12px', borderRadius: 8, border: '1px solid #ccc', background: '#fff' }}
-                            title="クリックで送信"
-                        >
-                            {c}
-                        </button>
-                    ))}
+                <div style={{ marginBottom: 12 }}>
+                    <div style={{ fontSize: 14, fontWeight: 'bold', marginBottom: 8, color: '#333' }}>
+                        行動を選択してください:
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                        {state._choices.map((c, i) => (
+                            <button
+                                key={c.id || i}
+                                onClick={() => send(c)}
+                                style={{ 
+                                    padding: '12px 16px', 
+                                    borderRadius: 8, 
+                                    border: '2px solid #4A90E2', 
+                                    background: '#fff',
+                                    textAlign: 'left',
+                                    cursor: 'pointer',
+                                    transition: 'all 0.2s',
+                                    fontSize: 14
+                                }}
+                                onMouseEnter={(e) => {
+                                    e.target.style.background = '#E3F2FD';
+                                    e.target.style.borderColor = '#1976D2';
+                                }}
+                                onMouseLeave={(e) => {
+                                    e.target.style.background = '#fff';
+                                    e.target.style.borderColor = '#4A90E2';
+                                }}
+                                title={c.category ? `カテゴリー: ${c.category}` : ''}
+                            >
+                                <strong>{c.text}</strong>
+                                {c.category && (
+                                    <span style={{ fontSize: 11, color: '#777', marginLeft: 8 }}>
+                                        ({c.category})
+                                    </span>
+                                )}
+                            </button>
+                        ))}
+                    </div>
                 </div>
             )}
 

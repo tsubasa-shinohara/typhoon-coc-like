@@ -3,6 +3,9 @@ import express from 'express';
 import cors from 'cors';
 import bodyParser from 'body-parser';
 import OpenAI from 'openai';
+import { readFileSync } from 'fs';
+import { join, dirname } from 'path';
+import { fileURLToPath } from 'url';
 
 const app = express();
 app.use(cors());
@@ -10,12 +13,35 @@ app.use(bodyParser.json());
 
 const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+
 // ====== 基本設定 ======
 const dramaMode = true;
 const MIN_TURNS = 5; // 最低ターン（ドラマ性のため）
-const END_TURNS = 8; // 伸びすぎ防止の自動終了
+const END_TURNS = 15; // フェーズベース: 5フェーズ × 3ターン = 15ターン
 
 const EVAC_INFO = ['なし', '高齢者等避難', '避難指示', '緊急安全確保'];
+
+// ====== フェーズ定義 ======
+const PHASES = [
+  { id: "T-24h", name: "予想到達24時間前", turnsInPhase: 3, baseAlertLevel: "なし" },
+  { id: "T-12h", name: "予想到達12時間前", turnsInPhase: 3, alertOptions: ["なし", "注意報"] },
+  { id: "T-6h", name: "予想到達6時間前", turnsInPhase: 3, alertOptions: ["なし", "注意報", "警報"] },
+  { id: "T-3h", name: "予想到達3時間前", turnsInPhase: 3, alertOptions: ["なし", "注意報", "警報", "特別警報"] },
+  { id: "T+6h", name: "通過後6時間経過", turnsInPhase: 3, baseAlertLevel: "なし" }
+];
+
+// ====== 選択肢データ読み込み ======
+let CHOICES_DATA;
+try {
+  const choicesPath = join(__dirname, 'data', 'choices.json');
+  CHOICES_DATA = JSON.parse(readFileSync(choicesPath, 'utf-8'));
+  console.log(`選択肢データ読み込み成功: ${CHOICES_DATA.choices.length}件`);
+} catch (err) {
+  console.error('選択肢データの読み込みエラー:', err);
+  CHOICES_DATA = { categories: [], choices: [] };
+}
 
 // ---------- シナリオ生成（家族・住宅・時間帯） ----------
 function choice(arr) {
@@ -47,11 +73,6 @@ function generateInitialScenario() {
   if (Math.random() < 0.3)
     members.push({ name: choice(['小型犬', '猫']), role: 'pet', location: 'home' });
 
-  // 1人くらい「不明」ケース
-  if (members.length >= 3 && Math.random() < 0.25) {
-    const idx = Math.floor(Math.random() * members.length);
-    if (members[idx].role !== 'player') members[idx].location = 'unknown';
-  }
 
   const hasElderly = members.some(m => m.role === 'elder');
   const carAvailable = Math.random() < 0.6;
@@ -66,8 +87,42 @@ function applySafetyRules(prev = {}, proposed = {}) {
   // ディープコピーで破壊を避ける
   const s = JSON.parse(JSON.stringify(prev || {}));
 
-  // ターンを進める（必要に応じて既存ロジックに合わせてください）
-  s.turn = (prev.turn || 0) + 1;
+  if (!s.currentPhase) s.currentPhase = 0; // PHASESのインデックス
+  if (!s.turnInPhase) s.turnInPhase = 0;
+  if (!s.totalTurns) s.totalTurns = 0;
+  
+  s.totalTurns = (s.totalTurns || 0) + 1;
+  s.turnInPhase = (s.turnInPhase || 0) + 1;
+  s.turn = s.totalTurns; // 互換性のため
+  
+  if (s.turnInPhase > PHASES[s.currentPhase].turnsInPhase) {
+    s.currentPhase++;
+    s.turnInPhase = 1;
+    
+    if (s.familyLocations) {
+      s.familyLocations = s.familyLocations.map(m => {
+        if (m.location === 'away') {
+          return { ...m, location: Math.random() < 0.7 ? 'home' : 'safe_away' };
+        }
+        return m;
+      });
+    }
+    
+    if (s.currentPhase < PHASES.length) {
+      const phase = PHASES[s.currentPhase];
+      if (phase.baseAlertLevel) {
+        s.phaseAlertLevel = phase.baseAlertLevel;
+      } else if (phase.alertOptions) {
+        const prevLevel = s.phaseAlertLevel || "なし";
+        s.phaseAlertLevel = selectAlertLevel(prevLevel, phase.alertOptions);
+      }
+    }
+  }
+  
+  if (s.currentPhase >= PHASES.length && !s.gameEnded) {
+    s.gameEnded = true;
+    s.phase = 'ended';
+  }
 
   // ===== updates の取り込み（AI出力を state へ反映） =====
   const u = proposed || {};
@@ -416,150 +471,45 @@ function applySafetyRules(prev = {}, proposed = {}) {
   // 今ターンが静穏か
   const calmNow = noJMA && noRiver && noEvacInfo;
 
-  // --- JMA 段階的進行（上書き・共存版） ---
-  const t = s.turn || 1;
-
-  // 現在のレベル
-  const currentSpecials = jma.special || [];
-  const currentWarnings = jma.warnings || [];
-  const currentAdvisories = jma.advisories || [];
-
-
-  // レベル決定ロジック
-  let newRain = null;
-  if (t <= 2) newRain = '大雨注意報';
-  else if (t <= 4) newRain = '大雨警報';
-  else if (t >= 5) {
-    const rainWarnDuration = s._warnDuration?.RAIN || 0;
-    if (rainWarnDuration >= 2) {
-      newRain = Math.random() < 0.9 ? '大雨特別警報' : '大雨警報';
-    } else {
-      newRain = '大雨警報';
-    }
+  const alertLevel = s.phaseAlertLevel || "なし";
+  
+  if (alertLevel === "なし") {
+    s.jma.advisories = [];
+    s.jma.warnings = [];
+    s.jma.special = [];
+  } else if (alertLevel === "注意報") {
+    s.jma.advisories = ['大雨注意報', '強風注意報'];
+    s.jma.warnings = [];
+    s.jma.special = [];
+    if (Math.random() < 0.3) s.jma.advisories.push('洪水注意報');
+  } else if (alertLevel === "警報") {
+    s.jma.advisories = [];
+    s.jma.warnings = ['大雨警報', '暴風警報'];
+    s.jma.special = [];
+    if (Math.random() < 0.6) s.jma.warnings.push('洪水警報');
+  } else if (alertLevel === "特別警報") {
+    s.jma.advisories = [];
+    s.jma.warnings = [];
+    s.jma.special = ['大雨特別警報', '暴風特別警報'];
   }
 
-  let newWind = null;
-  if (t <= 2) newWind = '強風注意報';
-  else if (t <= 4) newWind = '暴風警報';
-  else if (t >= 5) {
-    const windWarnDuration = s._warnDuration?.WIND || 0;
-    if (windWarnDuration >= 2) {
-      newWind = Math.random() < 0.8 ? '暴風特別警報' : '暴風警報';
-    } else {
-      newWind = '暴風警報';
-    }
-  }
-
-  let newFlood = null;
-  if (t >= 3 && t <= 5) newFlood = '洪水警報';
-  else if (t >= 6) newFlood = Math.random() < 0.6 ? '洪水注意報' : 'なし';
-
-  let newWave = null;
-  if (Math.random() < 0.5) newWave = (t <= 3 ? '波浪注意報' : '波浪警報');
-
-  let newTide = null;
-  if (Math.random() < 0.4 && t >= 4) newTide = (t >= 6 ? '高潮警報' : '高潮注意報');
-
-  // === 各シリーズ最低2ターン維持 ===
-  s._jmaPrev = s._jmaPrev || {}; // 各系列のレベル記録
-  s._jmaHold = s._jmaHold || {}; // ホールド残ターン数
-  s._warnDuration = s._warnDuration || {}; // 警報レベル継続ターン数
-
-  const SERIES = {
-    RAIN: ['大雨注意報', '大雨警報', '大雨特別警報'],
-    WIND: ['強風注意報', '暴風警報', '暴風特別警報'],
-    FLOOD: ['洪水注意報', '洪水警報'],
-    WAVE: ['波浪注意報', '波浪警報'],
-    TIDE: ['高潮注意報', '高潮警報', '高潮特別警報'],
-  };
-
-  const levelRank = (name) => {
-    if (!name) return 0;
-    if (name.includes('特別警報')) return 3;
-    if (name.includes('警報')) return 2;
-    if (name.includes('注意報')) return 1;
-    return 0;
-  };
-
-  const seriesCurrentLevel = (series) => {
-    const all = [...(s.jma.advisories || []), ...(s.jma.warnings || []), ...(s.jma.special || [])];
-    const hit = all.find((n) => series.includes(n));
-    return { name: hit || null, rank: levelRank(hit) };
-  };
-
-  const updateWarnDuration = (key, series) => {
-    const cur = seriesCurrentLevel(series);
-    if (cur.rank >= 2) {
-      s._warnDuration[key] = (s._warnDuration[key] || 0) + 1;
-    } else {
-      s._warnDuration[key] = 0;
-    }
-  };
-
-  const clearSeries = (series) => {
-    s.jma.advisories = (s.jma.advisories || []).filter(n => !series.includes(n));
-    s.jma.warnings = (s.jma.warnings || []).filter(n => !series.includes(n));
-    s.jma.special = (s.jma.special || []).filter(n => !series.includes(n));
-  };
-
-  const applyWarning = (newLevel, series) => {
-    if (!newLevel || newLevel === 'なし') {
-      clearSeries(series);
-      return;
-    }
-
-    clearSeries(series);
-
-    const rank = levelRank(newLevel);
-    if (rank === 1) s.jma.advisories.push(newLevel);
-    else if (rank === 2) s.jma.warnings.push(newLevel);
-    else if (rank === 3) s.jma.special.push(newLevel);
-  };
-
-  applyWarning(newRain, SERIES.RAIN);
-  applyWarning(newWind, SERIES.WIND);
-  applyWarning(newFlood, SERIES.FLOOD);
-  applyWarning(newWave, SERIES.WAVE);
-  applyWarning(newTide, SERIES.TIDE);
-
-  const ensureSeriesHold = (key, series) => {
-    const cur = seriesCurrentLevel(series);
-    const prev = s._jmaPrev[key] ?? 0;
-    const hold = s._jmaHold[key] ?? 0;
-
-    if (cur.rank > prev) {
-      s._jmaPrev[key] = cur.rank;
-      s._jmaHold[key] = 3;
-    } else if (cur.rank < prev && hold > 0) {
-      const targetName = series.find((n) => levelRank(n) === prev);
-      clearSeries(series);
-
-      if (prev === 1) s.jma.advisories.push(targetName);
-      if (prev === 2) s.jma.warnings.push(targetName);
-      if (prev === 3) s.jma.special.push(targetName);
-
-      s._jmaHold[key] = hold - 1;
-    } else if (cur.rank === prev && hold > 0) {
-      s._jmaHold[key] = hold - 1;
-    }
-
-    s._jmaPrev[key] = cur.rank;
-  };
-
-  Object.keys(SERIES).forEach((k) => {
-    updateWarnDuration(k, SERIES[k]);
-    ensureSeriesHold(k, SERIES[k]);
-  });
-
-  // === 大雨警報＋洪水警報 2ターン継続で 土砂災害警戒情報 ===
-  s._rf2 = s._rf2 || 0;
+  // === 大雨警報＋洪水警報で土砂災害警戒情報（組み合わせロジック維持） ===
   const rainWarn = (s.jma?.warnings || []).includes('大雨警報');
   const floodWarn = (s.jma?.warnings || []).includes('洪水警報');
-  if (rainWarn && floodWarn) s._rf2++; else s._rf2 = 0;
-  if (s._rf2 >= 2) {
+  if (rainWarn && floodWarn) {
     s.landslide = s.landslide || {};
     s.landslide.info = '土砂災害警戒情報';
     s.landslide.risk = 'medium';
+  }
+  
+  if (!s.scores) {
+    s.scores = {
+      生存度: 50,
+      判断力: 50,
+      貢献度: 50,
+      準備度: 50,
+      文化度: 50
+    };
   }
 
   // --- 現在のJMA状態を判定 ---
@@ -739,6 +689,137 @@ function applySafetyRules(prev = {}, proposed = {}) {
   return s;
 }
 
+function selectAlertLevel(prevLevel, options) {
+  const levelRank = { "なし": 0, "注意報": 1, "警報": 2, "特別警報": 3 };
+  const prevRank = levelRank[prevLevel] || 0;
+  
+  const validOptions = options.filter(opt => {
+    const rank = levelRank[opt] || 0;
+    return Math.abs(rank - prevRank) <= 1;
+  });
+  
+  if (validOptions.length === 0) return options[0];
+  
+  const weights = validOptions.map(opt => {
+    const rank = levelRank[opt] || 0;
+    if (rank === prevRank) return 0.5;
+    if (rank > prevRank) return 0.3;
+    return 0.2;
+  });
+  
+  const totalWeight = weights.reduce((a, b) => a + b, 0);
+  const random = Math.random() * totalWeight;
+  let cumWeight = 0;
+  for (let i = 0; i < validOptions.length; i++) {
+    cumWeight += weights[i];
+    if (random <= cumWeight) return validOptions[i];
+  }
+  return validOptions[0];
+}
+
+function filterAvailableChoices(state) {
+  const currentPhase = PHASES[state.currentPhase];
+  const phaseId = currentPhase?.id || "T-24h";
+  const alertLevel = state.phaseAlertLevel || "なし";
+  
+  return CHOICES_DATA.choices.filter(choice => {
+    if (!choice.availableWhen.phases.includes(phaseId)) return false;
+    if (!choice.availableWhen.alertLevels.includes(alertLevel)) return false;
+    
+    if (choice.availableWhen.conditions.requireItems) {
+      const hasRequiredItems = choice.availableWhen.conditions.requireItems.every(
+        item => (state.items || []).includes(item)
+      );
+      if (!hasRequiredItems) return false;
+    }
+    
+    if (choice.availableWhen.conditions.requireFlags) {
+      const hasRequiredFlags = choice.availableWhen.conditions.requireFlags.every(
+        flag => (state.flags || []).includes(flag)
+      );
+      if (!hasRequiredFlags) return false;
+    }
+    
+    if (choice.availableWhen.conditions.excludeEvacStatus) {
+      const evacStatus = state.evac?.status || 'none';
+      if (choice.availableWhen.conditions.excludeEvacStatus.includes(evacStatus)) {
+        return false;
+      }
+    }
+    
+    if (choice.availableWhen.conditions.requireHouseFloors) {
+      const houseFloors = state.scenario?.house?.floors || 1;
+      if (houseFloors < choice.availableWhen.conditions.requireHouseFloors) {
+        return false;
+      }
+    }
+    
+    return true;
+  });
+}
+
+function selectRandomChoices(availableChoices, count = 3) {
+  if (availableChoices.length === 0) {
+    return [
+      { id: 'fallback_1', text: '現状を確認する', category: '情報系' },
+      { id: 'fallback_2', text: '家族と話し合う', category: 'コミュニケーション系' },
+      { id: 'fallback_3', text: '待機する', category: '待機・時間調整系' }
+    ];
+  }
+  
+  const selected = [];
+  const used = new Set();
+  
+  while (selected.length < count && selected.length < availableChoices.length) {
+    const availableForSelection = availableChoices.filter(c => !used.has(c.id));
+    if (availableForSelection.length === 0) break;
+    
+    const totalWeight = availableForSelection.reduce((sum, c) => sum + c.weight, 0);
+    let random = Math.random() * totalWeight;
+    let cumWeight = 0;
+    
+    for (const choice of availableForSelection) {
+      cumWeight += choice.weight;
+      if (random <= cumWeight) {
+        selected.push(choice);
+        used.add(choice.id);
+        break;
+      }
+    }
+  }
+  
+  return selected;
+}
+
+function handleCustomEffect(effectId, state) {
+  switch (effectId) {
+    case 'dragon_summoner':
+      if (Math.random() < 0.01) {
+        return { 
+          typhoonDiverted: true, 
+          specialEvent: '龍使いが龍を呼び、台風の進路が変わった！' 
+        };
+      }
+      return { 
+        specialEvent: '龍使い『今回は龍の機嫌が悪いようだ...』少し台風の勢力が弱まった。' 
+      };
+    
+    case 'vertical_evacuation':
+      return { currentFloor: 2 };
+    
+    case 'start_evacuation':
+      return { 
+        evac: { 
+          status: 'en_route',
+          startTurn: state.totalTurns 
+        } 
+      };
+    
+    default:
+      return {};
+  }
+}
+
 // ---------- SYSTEM（ドラマ＋土砂前兆＋道中＋家族所在） ----------
 const SYSTEM = `
 あなたは「物語演出AI」。各ターンは助言なしの短い情景描写のみ。JSONだけを返すこと。
@@ -826,7 +907,7 @@ const SYSTEM = `
 // ---------- API ----------
 app.post('/api/facilitator', async (req, res) => {
   try {
-    const { messages, lastRoll, state } = req.body;
+    const { messages, lastRoll, state, selectedChoiceId } = req.body;
     const payload = { messages, lastRoll, state, dramaMode };
 
     const systemPlus =
@@ -860,189 +941,211 @@ app.post('/api/facilitator', async (req, res) => {
       }
     }
 
-    const narration = data?.narration || '（描写が生成できませんでした）';
-    const updates = data?.updates || {};
-    let choices = Array.isArray(data?.choices) ? data.choices.slice(0, 3) : null;
-
-    // narr が失敗したときのフォールバック（無言ターン対策）
-    let safeNarr = narration;
-    if (!safeNarr || safeNarr.includes('生成できません')) {
-      safeNarr = '風がうなり、家は小さく軋む。暗がりの中、鼓動が早まる。';
-    }
-
-    // choices のフォールバック（必ず3件、状況に応じて）
-    if (true) {
-      const evac = (state?.evac?.status) || 'none';
-      const maxFloors = state?.scenario?.house?.floors || 2;
-      const currentFloor = state?.currentFloor || 1;
-      const hasWarnings = (state?.jma?.warnings?.length || 0) > 0;
-      const hasSpecialWarnings = (state?.jma?.special?.length || 0) > 0;
-      
-      if (evac === 'en_route') {
-        choices = [
-          '足元を照らし静かに進む',
-          '冠水路を避けて回り込む',
-          '一旦立ち止まり状況確認'
-        ];
-      } else if (hasSpecialWarnings) {
-        if (maxFloors > 1 && currentFloor < maxFloors) {
-          choices = [
-            '家族を上階へ誘導する',
-            '窓から離れて待機する',
-            '最新の警報を確認する'
-          ];
-        } else {
-          choices = [
-            '窓から離れて待機する',
-            '救助要請の準備をする',
-            '最新の警報を確認する'
-          ];
-        }
-      } else if (hasWarnings) {
-        if (maxFloors > 1 && currentFloor < maxFloors) {
-          choices = [
-            '家族を上階へ避難させる',
-            '避難所への移動を準備する',
-            '家族の安否を確認する'
-          ];
-        } else {
-          choices = [
-            '避難所への移動を準備する',
-            '家族の安否を確認する',
-            '非常用品を確認する'
-          ];
-        }
-      } else {
-        if (maxFloors > 1) {
-          choices = [
-            '家族の所在を確認する',
-            '避難の準備を進める',
-            '最新の気象情報を確認する'
-          ];
-        } else {
-          choices = [
-            '家族の所在を確認する',
-            '避難の準備を進める',
-            '窓や雨戸を確認する'
-          ];
-        }
-      }
-    }
-
-    // lastAction を state に保存（家族連絡検知用）
-    const lastAction = messages?.slice(-1)?.[0]?.content || '';
-    if (state) {
-      state._lastAction = lastAction;
-    }
-
-    // ------------------------------------------------------------
-    // ------------------------------------------------------------
-    const maxFloors = state?.scenario?.house?.floors || 2;
-    const floorKeywords = ['階', '2階', '3階', '上階', '階段'];
-    const movementKeywords = ['移動', '移る', '避難', '上がる', '登る', '行く', '昇る', '向かう', '目指す', '突撃'];
-    const hasFloorKeyword = floorKeywords.some(k => lastAction.includes(k));
-    const hasMovementKeyword = movementKeywords.some(k => lastAction.includes(k));
+    let selectedChoice = null;
+    let updates = {};
     
-    if (state && hasFloorKeyword && hasMovementKeyword) {
-      const attemptedFloor = lastAction.includes('3階') ? 3 : lastAction.includes('2階') ? 2 : null;
+    if (selectedChoiceId) {
+      selectedChoice = CHOICES_DATA.choices.find(c => c.id === selectedChoiceId);
       
-      if (attemptedFloor && attemptedFloor > maxFloors) {
-        if (!state.floorMovementFeedback) state.floorMovementFeedback = [];
-        state.floorMovementFeedback.push({ turn: state.turn || 1, text: `この家に${attemptedFloor}階はなかった…。` });
+      if (selectedChoice) {
+        updates.scoreDelta = selectedChoice.scoreDelta;
+        
+        if (selectedChoice.effects.setFlags && selectedChoice.effects.setFlags.length > 0) {
+          updates.flags = [...(state.flags || []), ...selectedChoice.effects.setFlags];
+        }
+        
+        if (selectedChoice.effects.addItems && selectedChoice.effects.addItems.length > 0) {
+          updates.items = [...(state.items || []), ...selectedChoice.effects.addItems];
+        }
+        
+        if (selectedChoice.effects.customEffect) {
+          const customUpdates = handleCustomEffect(selectedChoice.effects.customEffect, state);
+          updates = { ...updates, ...customUpdates };
+        }
       }
-    }
-
-    if (state?.floorMovementFeedback?.length > 0) {
-      const feedbackText = state.floorMovementFeedback
-        .map(f => f.text)
-        .join(' ');
-      safeNarr += `\n\nなお、${feedbackText}`;
     }
 
     let next = applySafetyRules(state || {}, updates);
 
-    // スコア反映
     const d = updates?.scoreDelta || {};
-    const neighborBonus = next._neighborCalloutBonus || { compassion: 0, safety: 0 };
-    next.scores = {
-      safety: (next.scores?.safety || 0) + (d.safety || 0) + (neighborBonus.safety || 0),
-      compassion: (next.scores?.compassion || 0) + (d.compassion || 0) + (neighborBonus.compassion || 0),
-      composure: (next.scores?.composure || 0) + (d.composure || 0),
-    };
-
-    if (next._neighborCalloutBonus) {
-      delete next._neighborCalloutBonus;
+    if (d && Object.keys(d).length > 0) {
+      Object.keys(d).forEach(key => {
+        if (next.scores[key] !== undefined) {
+          next.scores[key] = Math.max(0, Math.min(100, next.scores[key] + d[key]));
+        }
+      });
     }
+    
+    let safeNarr = '';
+    if (selectedChoice) {
+      const currentPhase = PHASES[next.currentPhase] || PHASES[0];
+      const narrationPrompt = `あなたは台風災害シミュレーションゲームのナレーターです。
+
+現在の状況:
+- フェーズ: ${currentPhase.name}
+- ターン: ${next.turnInPhase}/3
+- 警報レベル: ${next.phaseAlertLevel || 'なし'}
+- 避難状態: ${next.evac?.status || 'none'}
+
+プレイヤーの行動: ${selectedChoice.text}
+
+30〜120字の短い情景描写を生成してください。音、匂い、光、家族の表情など感覚的な描写を含めてください。
+助言や結論は含めないでください。
+
+JSON形式で返してください:
+{
+  "narration": "ここに描写"
+}`;
+
+      try {
+        const r = await client.responses.create({
+          model: 'gpt-4o-mini',
+          input: [
+            { role: 'user', content: narrationPrompt }
+          ],
+        });
+
+        const output = (r.output_text || '').trim();
+        const narrationData = JSON.parse(output);
+        safeNarr = narrationData?.narration || selectedChoice.feedback;
+      } catch (err) {
+        console.error('AI応答エラー:', err);
+        safeNarr = selectedChoice.feedback || '風がうなり、家は小さく軋む。';
+      }
+    } else {
+      safeNarr = '風がうなり、家は小さく軋む。暗がりの中、鼓動が早まる。';
+    }
+    
+    if (next.specialEvent) {
+      safeNarr += `\n\n${next.specialEvent}`;
+    }
+    
+    const availableChoices = filterAvailableChoices(next);
+    const choices = selectRandomChoices(availableChoices, 3);
 
     // 物語ログ
-    next.story = [...(next.story || []), { turn: next.turn - 1, narration, action: lastAction }];
+    const actionText = selectedChoice?.text || '';
+    next.story = [...(next.story || []), { 
+      turn: next.totalTurns, 
+      narration: safeNarr, 
+      action: actionText 
+    }];
 
     // 自動終了ガード
-    if (next.turn > END_TURNS || next.gameEnded) {
+    if (next.phase === 'ended' || next.gameEnded) {
       next.phase = 'ended';
     }
 
     // 結果生成
     let finalReport = null;
     if (next.phase === 'ended') {
-      finalReport = buildFinalReport(next);
+      finalReport = await buildFinalReport(next, client);
     }
+    
+    const phaseInfo = {
+      phaseName: PHASES[next.currentPhase]?.name || '終了',
+      phaseId: PHASES[next.currentPhase]?.id || 'ended',
+      turnInPhase: next.turnInPhase,
+      totalTurns: next.totalTurns,
+      alertLevel: next.phaseAlertLevel
+    };
 
-    res.json({ text: safeNarr, choices, newState: { ...next, finalReport } });
+    res.json({ 
+      narration: safeNarr, 
+      choices: choices.map(c => ({ id: c.id, text: c.text, category: c.category })), 
+      state: next,
+      phaseInfo,
+      finalReport
+    });
   } catch (e) {
     console.error('[AI ERROR]', e?.message || e);
     res.status(500).json({ error: 'AI応答エラー', detail: e?.message || String(e) });
   }
 });
 
-// 結果レポート
-function buildFinalReport(s) {
-  const { safety = 0, compassion = 0, composure = 0 } = s.scores || {};
-  const scoreTag = (v) => (v >= 3 ? '◎' : v >= 1 ? '○' : v <= -3 ? '×' : v <= -1 ? '△' : '–');
+async function buildFinalReport(s, client) {
+  const scores = s.scores || {
+    生存度: 50,
+    判断力: 50,
+    貢献度: 50,
+    準備度: 50,
+    文化度: 50
+  };
 
-  // === タイプ診断 ===
-  const personality = (() => {
-    const axes = { safety, compassion, composure };
-    // 重み付けは最小構成（必要なら後で細かく）
-    const top = Object.entries(axes).sort((a, b) => b[1] - a[1])[0]?.[0] || 'safety';
-    if (axes.compasion >= 3 && axes.composure >= 2) return { key: 'guardian', label: '共感型ガーディアン', blurb: '人を思いやり、混乱の中でも落ち着きを保てるタイプ。声かけと分散避難の判断が光ります。' };
-    if (top === 'safety' && safety >= 3) return { key: 'decider', label: '迅速判断型', blurb: 'リスクを素早く捉え、早めの避難や垂直移動を決断できます。' };
-    if (top === 'compassion' && compassion >= 3) return { key: 'empath', label: '共感型リーダー', blurb: '近所や家族へ配慮を忘れません。声かけ・見守りの力で被害を減らせます。' };
-    if (top === 'composure' && composure >= 3) return { key: 'analyst', label: '情報分析型', blurb: '警報・気象・河川情報を冷静に読み、根拠ある判断ができます。' };
-    return { key: 'balanced', label: 'バランス型', blurb: '安全・思いやり・冷静さのバランスが取れています。状況に応じて役割を切替できる素質あり。' };
-  })();
+  const weightedScores = {
+    生存: scores.生存度 * 0.35,
+    判断: scores.判断力 * 0.25,
+    準備: scores.準備度 * 0.20,
+    貢献: scores.貢献度 * 0.15,
+    文化: scores.文化度 * 0.05
+  };
+  
+  const totalScore = Object.values(weightedScores).reduce((a, b) => a + b, 0);
+  
+  let rank;
+  if (totalScore >= 90) rank = 'S（防災マスター）';
+  else if (totalScore >= 75) rank = 'A（優秀）';
+  else if (totalScore >= 60) rank = 'B（合格）';
+  else if (totalScore >= 40) rank = 'C（要改善）';
+  else rank = 'D（危険）';
+
+  const actions = s.story?.map(st => st.action).filter(a => a).slice(0, 10) || [];
+  
+  const reportPrompt = `台風災害シミュレーションゲームの最終評価を生成してください。
+
+スコア:
+- 生存度: ${scores.生存度}/100 (重み35%)
+- 判断力: ${scores.判断力}/100 (重み25%)
+- 準備度: ${scores.準備度}/100 (重み20%)
+- 貢献度: ${scores.貢献度}/100 (重み15%)
+- 文化度: ${scores.文化度}/100 (重み5%)
+
+総合得点: ${totalScore.toFixed(1)}点
+ランク: ${rank}
+
+プレイヤーが選択した主な行動:
+${actions.slice(0, 5).map((a, i) => `${i + 1}. ${a}`).join('\n')}
+
+200〜300字程度の評価コメントを生成してください。
+良かった点と改善点の両方に触れてください。
+
+JSON形式:
+{
+  "report": "ここに評価コメント",
+  "advice": "次回へのアドバイス（100字程度）"
+}`;
+
+  let report = '総合的に良い判断ができました。';
+  let advice = '引き続き防災意識を高めていきましょう。';
+  
+  try {
+    const r = await client.responses.create({
+      model: 'gpt-4o-mini',
+      input: [
+        { role: 'user', content: reportPrompt }
+      ],
+    });
+
+    const output = (r.output_text || '').trim();
+    const reportData = JSON.parse(output);
+    report = reportData?.report || report;
+    advice = reportData?.advice || advice;
+  } catch (err) {
+    console.error('最終レポート生成エラー:', err);
+  }
 
   const keyMoments = s.story?.slice(0, 3).map((m) => `・T${m.turn}：${m.narration}`) || [];
   const lastMoments = s.story?.slice(-2).map((m) => `・T${m.turn}：${m.narration}`) || [];
 
-  const journey = Array.isArray(s.evac?.journeyLog)
-    ? s.evac.journeyLog.map((j) => `・T${j.turn}：${j.text}`)
-    : [];
-  const evacLine =
-    s.evac?.status === 'arrived'
-      ? `避難先「${s.evac?.shelterName || '避難所'}」に到着。経路: ${(s.evac?.route || []).join('→') || '—'}`
-      : s.evac?.status === 'aborted'
-        ? `避難は断念。理由: ${(s.evac?.hazards || []).join('、') || '状況悪化'}`
-        : `避難は未完了（status: ${s.evac?.status || 'none'}）`;
-
-  const advice = [
-    s.floodLevel !== 'none'
-      ? '浸水想定区域では早めの垂直避難・移動計画を。'
-      : '非常用ライトとラジオの所在を家族で共有しましょう。',
-    s.powerOutage
-      ? '停電時は冷蔵庫の開閉を最小化、充電は計画的に。'
-      : 'モバイルバッテリーは満充電・分散保管が安心です。',
-    s.landslide?.risk !== 'none'
-      ? '土砂前兆（濁り水・湧水・木のざわめき等）を感じたら、斜面から離れた上階・遠方へ。'
-      : '山裾の家では前兆サインを家族で共有しておきましょう。',
-  ];
-
   return {
     headline: s.jma?.special?.length ? '嵐の只中で' : '荒天の夜をこえて',
-    summaryBullets: [...keyMoments, '…', ...lastMoments, evacLine, ...journey.slice(-3)],
-    scores: { safety, compassion, composure },
-    personality, // ← 追加
-    advice,
+    summaryBullets: [...keyMoments, '…', ...lastMoments],
+    scores,
+    weightedScores,
+    totalScore: totalScore.toFixed(1),
+    rank,
+    report,
+    advice
   };
 }
 
