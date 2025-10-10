@@ -19,7 +19,7 @@ const __dirname = dirname(__filename);
 // ====== 基本設定 ======
 const dramaMode = true;
 const MIN_TURNS = 5; // 最低ターン（ドラマ性のため）
-const END_TURNS = 15; // フェーズベース: 5フェーズ × 3ターン = 15ターン
+const END_TURNS = 12; // フェーズベース: 4フェーズ × 3ターン = 12ターン（T+6hは結果表示のみ）
 
 const EVAC_INFO = ['なし', '高齢者等避難', '避難指示', '緊急安全確保'];
 
@@ -119,7 +119,7 @@ function applySafetyRules(prev = {}, proposed = {}) {
     }
   }
   
-  if (s.currentPhase >= PHASES.length && !s.gameEnded) {
+  if (s.currentPhase >= 4 && !s.gameEnded) {
     s.gameEnded = true;
     s.phase = 'ended';
   }
