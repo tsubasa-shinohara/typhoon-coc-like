@@ -90,6 +90,9 @@ function applySafetyRules(prev = {}, proposed = {}) {
   if (!s.currentPhase) s.currentPhase = 0; // PHASESのインデックス
   if (!s.turnInPhase) s.turnInPhase = 0;
   if (!s.totalTurns) s.totalTurns = 0;
+  if (!s.selectedChoiceIds) s.selectedChoiceIds = [];
+  if (!s.phaseData) s.phaseData = {};
+  if (!s.flags) s.flags = [];
   
   s.totalTurns = (s.totalTurns || 0) + 1;
   s.turnInPhase = (s.turnInPhase || 0) + 1;
@@ -98,6 +101,7 @@ function applySafetyRules(prev = {}, proposed = {}) {
   if (s.turnInPhase > PHASES[s.currentPhase].turnsInPhase) {
     s.currentPhase++;
     s.turnInPhase = 1;
+    s.phaseData.turn1Categories = [];
     
     if (s.familyLocations) {
       s.familyLocations = s.familyLocations.map(m => {
@@ -758,33 +762,136 @@ function filterAvailableChoices(state) {
   });
 }
 
-function selectRandomChoices(availableChoices, count = 3) {
-  if (availableChoices.length === 0) {
+function weightedRandomChoice(choices) {
+  if (!choices || choices.length === 0) return null;
+  
+  const totalWeight = choices.reduce((sum, c) => sum + (c.weight || 1), 0);
+  let random = Math.random() * totalWeight;
+  let cumWeight = 0;
+  
+  for (const choice of choices) {
+    cumWeight += (choice.weight || 1);
+    if (random <= cumWeight) {
+      return choice;
+    }
+  }
+  
+  return choices[choices.length - 1];
+}
+
+function selectChoicesByTurn(availableChoices, turnInPhase, state) {
+  const ACTIVE_CATEGORIES = ['情報系', 'コミュニケーション系', '物資準備系', '住宅対策系', '避難行動系'];
+  const WAITING_CATEGORY = '待機・時間調整系';
+  
+  const unselectedChoices = availableChoices.filter(c => 
+    !state.selectedChoiceIds || !state.selectedChoiceIds.includes(c.id)
+  );
+  
+  if (unselectedChoices.length === 0) {
     return [
       { id: 'fallback_1', text: '現状を確認する', category: '情報系' },
       { id: 'fallback_2', text: '家族と話し合う', category: 'コミュニケーション系' },
-      { id: 'fallback_3', text: '待機する', category: '待機・時間調整系' }
+      { id: 'fallback_3', text: '様子を見る', category: '待機・時間調整系' },
+      { id: 'fallback_4', text: '情報を収集する', category: '情報系' }
     ];
   }
   
   const selected = [];
-  const used = new Set();
+  const usedCategories = new Set();
   
-  while (selected.length < count && selected.length < availableChoices.length) {
-    const availableForSelection = availableChoices.filter(c => !used.has(c.id));
-    if (availableForSelection.length === 0) break;
+  const triggeredChoices = unselectedChoices.filter(choice => {
+    const requiredFlags = choice.availableWhen?.conditions?.requireFlags || [];
+    if (requiredFlags.length === 0) return false;
+    return requiredFlags.every(flag => (state.flags || []).includes(flag));
+  });
+  
+  if (turnInPhase === 1) {
+    const shuffledCategories = [...ACTIVE_CATEGORIES].sort(() => Math.random() - 0.5);
+    const selectedCategories = shuffledCategories.slice(0, 4);
     
-    const totalWeight = availableForSelection.reduce((sum, c) => sum + c.weight, 0);
-    let random = Math.random() * totalWeight;
-    let cumWeight = 0;
+    state.phaseData = state.phaseData || {};
+    state.phaseData.turn1Categories = selectedCategories;
     
-    for (const choice of availableForSelection) {
-      cumWeight += choice.weight;
-      if (random <= cumWeight) {
-        selected.push(choice);
-        used.add(choice.id);
-        break;
+    for (const category of selectedCategories) {
+      const categoryChoices = unselectedChoices.filter(c => c.category === category);
+      if (categoryChoices.length > 0) {
+        const choice = weightedRandomChoice(categoryChoices);
+        if (choice) {
+          selected.push(choice);
+          usedCategories.add(category);
+        }
       }
+    }
+  } else if (turnInPhase === 2) {
+    const turn1Cats = state.phaseData?.turn1Categories || [];
+    const remainingCategories = ACTIVE_CATEGORIES.filter(cat => !turn1Cats.includes(cat));
+    
+    for (const category of remainingCategories.slice(0, 2)) {
+      const categoryChoices = unselectedChoices.filter(c => c.category === category);
+      if (categoryChoices.length > 0) {
+        const choice = weightedRandomChoice(categoryChoices);
+        if (choice && !selected.find(s => s.id === choice.id)) {
+          selected.push(choice);
+          usedCategories.add(category);
+        }
+      }
+    }
+    
+    if (triggeredChoices.length > 0 && selected.length < 4) {
+      const triggeredChoice = weightedRandomChoice(triggeredChoices);
+      if (triggeredChoice && !selected.find(s => s.id === triggeredChoice.id)) {
+        selected.push(triggeredChoice);
+        usedCategories.add(triggeredChoice.category);
+      }
+    }
+    
+    while (selected.length < 4 && selected.length < unselectedChoices.length) {
+      const activeChoices = unselectedChoices.filter(c => 
+        ACTIVE_CATEGORIES.includes(c.category) && 
+        !selected.find(s => s.id === c.id)
+      );
+      if (activeChoices.length === 0) break;
+      const choice = weightedRandomChoice(activeChoices);
+      if (choice) {
+        selected.push(choice);
+      }
+    }
+  } else if (turnInPhase === 3) {
+    const waitingChoices = unselectedChoices.filter(c => c.category === WAITING_CATEGORY);
+    if (waitingChoices.length > 0) {
+      const choice = weightedRandomChoice(waitingChoices);
+      if (choice) {
+        selected.push(choice);
+        usedCategories.add(WAITING_CATEGORY);
+      }
+    }
+    
+    if (triggeredChoices.length > 0 && selected.length < 4) {
+      const triggeredChoice = weightedRandomChoice(triggeredChoices);
+      if (triggeredChoice && !selected.find(s => s.id === triggeredChoice.id)) {
+        selected.push(triggeredChoice);
+      }
+    }
+    
+    while (selected.length < 4 && selected.length < unselectedChoices.length) {
+      const activeChoices = unselectedChoices.filter(c => 
+        ACTIVE_CATEGORIES.includes(c.category) && 
+        !selected.find(s => s.id === c.id)
+      );
+      if (activeChoices.length === 0) break;
+      const choice = weightedRandomChoice(activeChoices);
+      if (choice) {
+        selected.push(choice);
+      }
+    }
+  }
+  
+  while (selected.length < 4 && selected.length < unselectedChoices.length) {
+    const remaining = unselectedChoices.filter(c => !selected.find(s => s.id === c.id));
+    if (remaining.length === 0) break;
+    const choice = weightedRandomChoice(remaining);
+    if (choice) {
+      selected.push(choice);
     }
   }
   
@@ -907,38 +1014,10 @@ const SYSTEM = `
 // ---------- API ----------
 app.post('/api/facilitator', async (req, res) => {
   try {
-    const { messages, lastRoll, state, selectedChoiceId } = req.body;
-    const payload = { messages, lastRoll, state, dramaMode };
+    const { messages, state, selectedChoiceId } = req.body;
 
-    const systemPlus =
-      SYSTEM +
-      (lastRoll ? `\nd100=${lastRoll}` : '') +
-      `\nシナリオ（家族・住宅・時間帯）: ${JSON.stringify(
-        state?.scenario || {}
-      )}`;
-
-    const r = await client.responses.create({
-      model: 'gpt-4o-mini',
-      input: [
-        { role: 'system', content: systemPlus },
-        { role: 'user', content: JSON.stringify(payload) },
-      ],
-    });
-
-    let out = (r.output_text || '').trim();
-    let data = null;
-    if (out.startsWith('{')) {
-      try {
-        data = JSON.parse(out);
-      } catch { }
-    }
-    if (!data) {
-      const m = out.match(/\{[\s\S]*\}$/);
-      if (m) {
-        try {
-          data = JSON.parse(m[0]);
-        } catch { }
-      }
+    if (!selectedChoiceId) {
+      return res.status(400).json({ error: '選択肢を選んでください' });
     }
 
     let selectedChoice = null;
@@ -976,7 +1055,20 @@ app.post('/api/facilitator', async (req, res) => {
       });
     }
     
-    let safeNarr = '';
+    if (selectedChoice && selectedChoice.effects && selectedChoice.effects.setFlags) {
+      for (const flag of selectedChoice.effects.setFlags) {
+        if (!next.flags.includes(flag)) {
+          next.flags.push(flag);
+        }
+      }
+    }
+    
+    let predefinedFeedback = '';
+    if (selectedChoice) {
+      predefinedFeedback = selectedChoice.feedback || selectedChoice.text;
+    }
+    
+    let aiNarration = '';
     if (selectedChoice) {
       const currentPhase = PHASES[next.currentPhase] || PHASES[0];
       const narrationPrompt = `あなたは台風災害シミュレーションゲームのナレーターです。
@@ -1007,23 +1099,29 @@ JSON形式で返してください:
 
         const output = (r.output_text || '').trim();
         const narrationData = JSON.parse(output);
-        safeNarr = narrationData?.narration || selectedChoice.feedback;
+        aiNarration = narrationData?.narration || '';
       } catch (err) {
-        console.error('AI応答エラー:', err);
-        safeNarr = selectedChoice.feedback || '風がうなり、家は小さく軋む。';
+        console.error('AIナレーション生成エラー:', err);
+        aiNarration = '風がうなり、家は小さく軋む。';
       }
-    } else {
-      safeNarr = '風がうなり、家は小さく軋む。暗がりの中、鼓動が早まる。';
+    }
+    
+    let safeNarr = predefinedFeedback;
+    if (aiNarration) {
+      safeNarr += '\n\n' + aiNarration;
     }
     
     if (next.specialEvent) {
       safeNarr += `\n\n${next.specialEvent}`;
     }
     
+    if (selectedChoiceId && selectedChoice) {
+      next.selectedChoiceIds = [...(next.selectedChoiceIds || []), selectedChoiceId];
+    }
+    
     const availableChoices = filterAvailableChoices(next);
-    const choices = selectRandomChoices(availableChoices, 3);
+    const choices = selectChoicesByTurn(availableChoices, next.turnInPhase, next);
 
-    // 物語ログ
     const actionText = selectedChoice?.text || '';
     next.story = [...(next.story || []), { 
       turn: next.totalTurns, 

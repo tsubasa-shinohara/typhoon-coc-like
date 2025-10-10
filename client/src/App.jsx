@@ -114,8 +114,6 @@ export default function App() {
         _choices: null,
     });
 
-    const [input, setInput] = useState('');
-    const [autoRoll, setAutoRoll] = useState(true);
     const roll = () => Math.floor(Math.random() * 100) + 1;
     const logRef = useRef(null);
     const textRef = useRef(null);
@@ -193,41 +191,22 @@ export default function App() {
     }, [scenario]);
 
     // ④ 送信
-    const send = async (choiceIdOrText) => {
-        const r = autoRoll ? roll() : null;
-        
-        let selectedChoiceId = null;
-        let content = '';
-        
-        if (typeof choiceIdOrText === 'string' && choiceIdOrText.trim()) {
-            const choice = state._choices?.find(c => c.id === choiceIdOrText || c.text === choiceIdOrText);
-            if (choice) {
-                selectedChoiceId = choice.id;
-                content = choice.text;
-            } else {
-                content = choiceIdOrText;
-            }
-        } else if (typeof choiceIdOrText === 'object' && choiceIdOrText?.id) {
-            selectedChoiceId = choiceIdOrText.id;
-            content = choiceIdOrText.text;
+    const send = async (choice) => {
+        if (!choice || !choice.id) {
+            console.error('選択肢が必要です');
+            return;
         }
-
-        if (!content && !selectedChoiceId) {
-            content = input?.trim() || '（無言）';
-        }
-
-        const userMsg = { role: 'user', content };
+        
+        const userMsg = { role: 'user', content: choice.text };
         const newMessages = [...messages, userMsg];
         setMessages(newMessages);
-        setInput('');
         setState(s => ({ ...s, _choices: null }));
 
         try {
             const res = await axios.post('http://localhost:8787/api/facilitator', {
                 messages: newMessages,
-                lastRoll: r,
                 state: { ...state, scenario },
-                selectedChoiceId,
+                selectedChoiceId: choice.id,
             });
             const { narration, choices, state: newState, phaseInfo: newPhaseInfo, finalReport } = res.data;
             
@@ -251,16 +230,9 @@ export default function App() {
             setMessages((m) => [...m, { role: 'assistant', content: '（サーバに接続できませんでした）' }]);
         } finally {
             setTimeout(() => logRef.current?.scrollTo(0, logRef.current.scrollHeight), 0);
-            textRef.current?.focus();
         }
     };
 
-    const onKeyDown = (e) => {
-        if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
-            e.preventDefault();
-            send();
-        }
-    };
 
     // ⑤ バッジ（状況）
     const powerBadge = state.powerOutage ? <Badge color="red">停電</Badge> : <Badge color="green">通電</Badge>;
@@ -407,7 +379,6 @@ export default function App() {
                 <h1>Typhoon Facilitator（結果）</h1>
 
                 <div style={{ marginBottom: 8 }}>
-                    <Badge color="blue">ターン {state.turn - 1} 終了</Badge>
                     {powerBadge}
                     {signalBadge}
                     {floodBadge}
@@ -493,7 +464,7 @@ export default function App() {
 
             {/* ステータス行 */}
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 10 }}>
-                <Badge color="blue">ターン {state.turn}</Badge>
+                {phaseInfo && <Badge color="blue">{phaseInfo.phaseName}</Badge>}
                 {powerBadge}
                 {signalBadge}
                 {floodBadge}
@@ -517,7 +488,7 @@ export default function App() {
             {/* フェーズ情報 */}
             {phaseInfo && (
                 <div style={{ padding: 10, border: '2px solid #4A90E2', borderRadius: 8, background: '#E3F2FD', marginBottom: 10, fontSize: 14 }}>
-                    <strong>{phaseInfo.phaseName}</strong> - ターン {phaseInfo.turnInPhase}/3 (総ターン: {phaseInfo.totalTurns})
+                    <strong>{phaseInfo.phaseName}</strong> - 行動 {phaseInfo.turnInPhase}/3
                     {phaseInfo.alertLevel && phaseInfo.alertLevel !== 'なし' && (
                         <span style={{ marginLeft: 10, color: '#d32f2f' }}>【{phaseInfo.alertLevel}】</span>
                     )}
@@ -615,28 +586,6 @@ export default function App() {
                 </div>
             )}
 
-            {/* 入力 */}
-            <div style={{ marginTop: 8, display: 'flex', gap: 8 }}>
-                <textarea
-                    value={input}
-                    onChange={(e) => setInput(e.target.value)}
-                    onKeyDown={onKeyDown}
-                    placeholder={`例：\n・家族の所在を確認する（配偶者に電話）\n・避難所へ向かう：路地→橋→学校の順で\n・祖母の手を引きつつ、子どもを先に誘導する\n・井戸の水や斜面の湧水を確認\n・懐中電灯とヘッドライトを準備`}
-                    rows={3}
-                    style={{ flex: 1, padding: 10, borderRadius: 8, border: '1px solid #ccc', resize: 'vertical' }}
-                />
-                <button onClick={send} style={{ padding: '10px 16px', height: 44 }}>
-                    送信
-                </button>
-            </div>
-
-            <div style={{ marginTop: 8, display: 'flex', alignItems: 'center', gap: 12 }}>
-                <label style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                    <input type="checkbox" checked={autoRoll} onChange={(e) => setAutoRoll(e.target.checked)} />
-                    毎回d100を自動で振る
-                </label>
-                <span style={{ color: '#777', marginLeft: 'auto' }}>送信ショートカット: Cmd/Ctrl+Enter</span>
-            </div>
         </div>
     );
 }
