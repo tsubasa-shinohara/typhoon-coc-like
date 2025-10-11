@@ -489,9 +489,21 @@ export default function App() {
             {phaseInfo && (
                 <div style={{ padding: 10, border: '2px solid #4A90E2', borderRadius: 8, background: '#E3F2FD', marginBottom: 10, fontSize: 14 }}>
                     <strong>{phaseInfo.phaseName}（{phaseInfo.turnInPhase}/3ターン）</strong>
-                    {phaseInfo.alertLevel && phaseInfo.alertLevel !== 'なし' && (
-                        <span style={{ marginLeft: 10, color: '#d32f2f' }}>【{phaseInfo.alertLevel}】</span>
-                    )}
+                    {(() => {
+                        const allAlerts = [
+                            ...(state.jma?.special || []),
+                            ...(state.jma?.warnings || []),
+                            ...(state.jma?.advisories || [])
+                        ];
+                        if (allAlerts.length > 0) {
+                            return (
+                                <span style={{ marginLeft: 10, color: '#d32f2f' }}>
+                                    【{allAlerts.join('・')}】
+                                </span>
+                            );
+                        }
+                        return null;
+                    })()}
                 </div>
             )}
 
