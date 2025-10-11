@@ -121,9 +121,7 @@ export default function App() {
     // ③ シナリオ確定 → 導入文
     useEffect(() => {
         if (!scenario) return;
-        const intro = `【導入】${scenario.house.area}の${scenario.house.floors}階建て。時刻は${scenario.timeOfDay}。家族：${scenario.family
-            .map((f) => `${f.name}${f.location === 'unknown' ? '（不明）' : ''}`)
-            .join('、')}。雨脚は強まり、家は時折きしむ。どう動く？`;
+        const intro = `【導入】遠洋にあった熱帯低気圧が台風にかわったようで、さらに予想進路をみてみると、なんと私の住む地域に直撃するコースのようだ…。今の中心気圧は980hPaで、これからさらに強くなる見込みらしい。しかし、現在の外の様子はとても静かで落ち着いている。まさに嵐の前の静けさ、といった具合だろうか。`;
         
         const initialState = {
             turn: 1,
