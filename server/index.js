@@ -97,7 +97,7 @@ function applySafetyRules(prev = {}, proposed = {}) {
   const s = JSON.parse(JSON.stringify(prev || {}));
 
   if (!s.currentPhase) s.currentPhase = 0; // PHASESのインデックス
-  if (!s.turnInPhase) s.turnInPhase = 0;
+  if (!s.turnInPhase) s.turnInPhase = 1;
   if (!s.totalTurns) s.totalTurns = 0;
   if (!s.selectedChoiceIds) s.selectedChoiceIds = [];
   if (!s.phaseData) s.phaseData = {};
@@ -608,36 +608,9 @@ function applySafetyRules(prev = {}, proposed = {}) {
     }
   }
 
-  if (s.turn <= 2 && !hasAdvisories && !hasWarnings && !hasSpecial) {
-    s.jma.advisories.push('強風注意報');
-  }
-
-  if (s.turn >= 3 && s.turn <= 4 && !hasWarnings && !hasSpecial) {
-    if (hasAdvisories && !hasWarnings) {
-      s.jma.warnings.push('大雨警報');
-    } else if (!hasAdvisories && !hasWarnings) {
-      s.jma.warnings.push('大雨警報');
-    }
-  }
-
-  if (s.turn >= 5 && !hasSpecial) {
-    const rainWarnDuration = s._warnDuration?.RAIN || 0;
-    const windWarnDuration = s._warnDuration?.WIND || 0;
-    
-    if (rainWarnDuration >= 2 || windWarnDuration >= 2) {
-      if (Math.random() < 0.9) {
-        s.jma.special.push('大雨特別警報');
-      } else {
-        s.jma.special = [];
-        if (s.jma.warnings.length === 0) {
-          s.jma.advisories.push('大雨注意報');
-        }
-      }
-    }
-  }
-
   // 連続静穏カウント（calmStreak）を更新
   s.calmStreak = (calmNow && notMoving) ? (prev.calmStreak || 0) + 1 : 0;
+
 
   // 5ターン連続で静穏 かつ 移動中でない → 自然終了
   if (s.calmStreak >= 5 && s.turn >= MIN_TURNS && notMoving && !s.gameEnded) {
@@ -1049,6 +1022,21 @@ app.post('/api/facilitator', async (req, res) => {
     
     let next = { ...(state || {}) };
     
+    if (!next.currentPhase) next.currentPhase = 0;
+    if (!next.turnInPhase) next.turnInPhase = 1;
+    if (!next.totalTurns) next.totalTurns = 0;
+    
+    if (!next.phaseAlertLevel) {
+      const currentPhase = PHASES[next.currentPhase];
+      if (currentPhase) {
+        if (currentPhase.baseAlertLevel) {
+          next.phaseAlertLevel = currentPhase.baseAlertLevel;
+        } else if (currentPhase.alertOptions && currentPhase.alertOptions.length > 0) {
+          next.phaseAlertLevel = currentPhase.alertOptions[0];
+        }
+      }
+    }
+    
     if (selectedChoiceId) {
       selectedChoice = CHOICES_DATA.choices.find(c => c.id === selectedChoiceId);
       
@@ -1212,7 +1200,7 @@ JSON形式で返してください:
       alertLevel: next.phaseAlertLevel
     };
 
-    res.json({ 
+    res.json({
       narration: safeNarr, 
       choices: choices.map(c => ({ id: c.id, text: c.text, category: c.category })), 
       state: next,
