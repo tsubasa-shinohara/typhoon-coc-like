@@ -460,24 +460,26 @@ function applySafetyRules(prev = {}, proposed = {}) {
 
   const alertLevel = s.phaseAlertLevel || "なし";
   
-  if (alertLevel === "なし") {
-    s.jma.advisories = [];
-    s.jma.warnings = [];
-    s.jma.special = [];
-  } else if (alertLevel === "注意報") {
-    s.jma.advisories = ['大雨注意報', '強風注意報'];
-    s.jma.warnings = [];
-    s.jma.special = [];
-    if (Math.random() < 0.3) s.jma.advisories.push('洪水注意報');
-  } else if (alertLevel === "警報") {
-    s.jma.advisories = [];
-    s.jma.warnings = ['大雨警報', '暴風警報'];
-    s.jma.special = [];
-    if (Math.random() < 0.6) s.jma.warnings.push('洪水警報');
-  } else if (alertLevel === "特別警報") {
-    s.jma.advisories = [];
-    s.jma.warnings = [];
-    s.jma.special = ['大雨特別警報', '暴風特別警報'];
+  if (s.turnInPhase === 1) {
+    if (alertLevel === "なし") {
+      s.jma.advisories = [];
+      s.jma.warnings = [];
+      s.jma.special = [];
+    } else if (alertLevel === "注意報") {
+      s.jma.advisories = ['大雨注意報', '強風注意報'];
+      s.jma.warnings = [];
+      s.jma.special = [];
+      if (Math.random() < 0.3) s.jma.advisories.push('洪水注意報');
+    } else if (alertLevel === "警報") {
+      s.jma.advisories = [];
+      s.jma.warnings = ['大雨警報', '暴風警報'];
+      s.jma.special = [];
+      if (Math.random() < 0.6) s.jma.warnings.push('洪水警報');
+    } else if (alertLevel === "特別警報") {
+      s.jma.advisories = [];
+      s.jma.warnings = [];
+      s.jma.special = ['大雨特別警報', '暴風特別警報'];
+    }
   }
 
   // === 大雨警報＋洪水警報で土砂災害警戒情報（組み合わせロジック維持） ===
@@ -890,9 +892,24 @@ function selectChoicesByTurn(availableChoices, turnInPhase, state) {
     }
   }
   
-  // Final fallback: if we still don't have 4 choices, allow category duplication
+  // Final fallback: if we still don't have 4 choices, try unused categories first
   if (selected.length < 4) {
     const allCategories = [...ACTIVE_CATEGORIES, WAITING_CATEGORY];
+    
+    while (selected.length < 4 && selected.length < unselectedChoices.length) {
+      const availableChoices = unselectedChoices.filter(c => 
+        allCategories.includes(c.category) && 
+        !selected.find(s => s.id === c.id) &&
+        !usedCategories.has(c.category)
+      );
+      if (availableChoices.length === 0) break;
+      const choice = weightedRandomChoice(availableChoices);
+      if (choice) {
+        selected.push(choice);
+        usedCategories.add(choice.category);
+      }
+    }
+    
     while (selected.length < 4 && selected.length < unselectedChoices.length) {
       const availableChoices = unselectedChoices.filter(c => 
         allCategories.includes(c.category) && 
@@ -1030,6 +1047,8 @@ app.post('/api/facilitator', async (req, res) => {
     let selectedChoice = null;
     let updates = {};
     
+    let next = { ...(state || {}) };
+    
     if (selectedChoiceId) {
       selectedChoice = CHOICES_DATA.choices.find(c => c.id === selectedChoiceId);
       
@@ -1053,20 +1072,15 @@ app.post('/api/facilitator', async (req, res) => {
           updates = { ...updates, ...customUpdates };
         }
       }
-    }
-
-    let next = applySafetyRules(state || {}, updates);
-
-    // Only increment turns when a choice was actually selected
-    if (selectedChoiceId) {
+      
       next.totalTurns = (next.totalTurns || 0) + 1;
       next.turnInPhase = (next.turnInPhase || 0) + 1;
       next.turn = next.totalTurns;
       
-      // Check if we need to advance to next phase
       if (next.turnInPhase > PHASES[next.currentPhase].turnsInPhase) {
         next.currentPhase++;
         next.turnInPhase = 1;
+        next.phaseData = next.phaseData || {};
         next.phaseData.turn1Categories = [];
         
         if (next.familyLocations) {
@@ -1076,19 +1090,21 @@ app.post('/api/facilitator', async (req, res) => {
           });
         }
       }
-    }
-
-    if (next.turnInPhase === 1) {
-      const currentPhase = PHASES[next.currentPhase];
-      if (currentPhase) {
-        if (currentPhase.baseAlertLevel) {
-          next.phaseAlertLevel = currentPhase.baseAlertLevel;
-        } else if (currentPhase.alertOptions && currentPhase.alertOptions.length > 0) {
-          const prevAlertLevel = next.phaseAlertLevel || "なし";
-          next.phaseAlertLevel = selectAlertLevel(prevAlertLevel, currentPhase.alertOptions);
+      
+      if (next.turnInPhase === 1) {
+        const currentPhase = PHASES[next.currentPhase];
+        if (currentPhase) {
+          if (currentPhase.baseAlertLevel) {
+            next.phaseAlertLevel = currentPhase.baseAlertLevel;
+          } else if (currentPhase.alertOptions && currentPhase.alertOptions.length > 0) {
+            const prevAlertLevel = next.phaseAlertLevel || "なし";
+            next.phaseAlertLevel = selectAlertLevel(prevAlertLevel, currentPhase.alertOptions);
+          }
         }
       }
     }
+
+    next = applySafetyRules(next, updates);
 
     const d = updates?.scoreDelta || {};
     if (d && Object.keys(d).length > 0) {
