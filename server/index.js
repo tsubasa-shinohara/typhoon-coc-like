@@ -97,7 +97,7 @@ function applySafetyRules(prev = {}, proposed = {}) {
   const s = JSON.parse(JSON.stringify(prev || {}));
 
   if (!s.currentPhase) s.currentPhase = 0; // PHASESのインデックス
-  if (!s.turnInPhase) s.turnInPhase = 0;
+  if (!s.turnInPhase) s.turnInPhase = 1;
   if (!s.totalTurns) s.totalTurns = 0;
   if (!s.selectedChoiceIds) s.selectedChoiceIds = [];
   if (!s.phaseData) s.phaseData = {};
@@ -460,24 +460,26 @@ function applySafetyRules(prev = {}, proposed = {}) {
 
   const alertLevel = s.phaseAlertLevel || "なし";
   
-  if (alertLevel === "なし") {
-    s.jma.advisories = [];
-    s.jma.warnings = [];
-    s.jma.special = [];
-  } else if (alertLevel === "注意報") {
-    s.jma.advisories = ['大雨注意報', '強風注意報'];
-    s.jma.warnings = [];
-    s.jma.special = [];
-    if (Math.random() < 0.3) s.jma.advisories.push('洪水注意報');
-  } else if (alertLevel === "警報") {
-    s.jma.advisories = [];
-    s.jma.warnings = ['大雨警報', '暴風警報'];
-    s.jma.special = [];
-    if (Math.random() < 0.6) s.jma.warnings.push('洪水警報');
-  } else if (alertLevel === "特別警報") {
-    s.jma.advisories = [];
-    s.jma.warnings = [];
-    s.jma.special = ['大雨特別警報', '暴風特別警報'];
+  if (s.turnInPhase === 1) {
+    if (alertLevel === "なし") {
+      s.jma.advisories = [];
+      s.jma.warnings = [];
+      s.jma.special = [];
+    } else if (alertLevel === "注意報") {
+      s.jma.advisories = ['大雨注意報', '強風注意報'];
+      s.jma.warnings = [];
+      s.jma.special = [];
+      if (Math.random() < 0.3) s.jma.advisories.push('洪水注意報');
+    } else if (alertLevel === "警報") {
+      s.jma.advisories = [];
+      s.jma.warnings = ['大雨警報', '暴風警報'];
+      s.jma.special = [];
+      if (Math.random() < 0.6) s.jma.warnings.push('洪水警報');
+    } else if (alertLevel === "特別警報") {
+      s.jma.advisories = [];
+      s.jma.warnings = [];
+      s.jma.special = ['大雨特別警報', '暴風特別警報'];
+    }
   }
 
   // === 大雨警報＋洪水警報で土砂災害警戒情報（組み合わせロジック維持） ===
@@ -606,36 +608,9 @@ function applySafetyRules(prev = {}, proposed = {}) {
     }
   }
 
-  if (s.turn <= 2 && !hasAdvisories && !hasWarnings && !hasSpecial) {
-    s.jma.advisories.push('強風注意報');
-  }
-
-  if (s.turn >= 3 && s.turn <= 4 && !hasWarnings && !hasSpecial) {
-    if (hasAdvisories && !hasWarnings) {
-      s.jma.warnings.push('大雨警報');
-    } else if (!hasAdvisories && !hasWarnings) {
-      s.jma.warnings.push('大雨警報');
-    }
-  }
-
-  if (s.turn >= 5 && !hasSpecial) {
-    const rainWarnDuration = s._warnDuration?.RAIN || 0;
-    const windWarnDuration = s._warnDuration?.WIND || 0;
-    
-    if (rainWarnDuration >= 2 || windWarnDuration >= 2) {
-      if (Math.random() < 0.9) {
-        s.jma.special.push('大雨特別警報');
-      } else {
-        s.jma.special = [];
-        if (s.jma.warnings.length === 0) {
-          s.jma.advisories.push('大雨注意報');
-        }
-      }
-    }
-  }
-
   // 連続静穏カウント（calmStreak）を更新
   s.calmStreak = (calmNow && notMoving) ? (prev.calmStreak || 0) + 1 : 0;
+
 
   // 5ターン連続で静穏 かつ 移動中でない → 自然終了
   if (s.calmStreak >= 5 && s.turn >= MIN_TURNS && notMoving && !s.gameEnded) {
@@ -890,6 +865,37 @@ function selectChoicesByTurn(availableChoices, turnInPhase, state) {
     }
   }
   
+  // Final fallback: if we still don't have 4 choices, try unused categories first
+  if (selected.length < 4) {
+    const allCategories = [...ACTIVE_CATEGORIES, WAITING_CATEGORY];
+    
+    while (selected.length < 4 && selected.length < unselectedChoices.length) {
+      const availableChoices = unselectedChoices.filter(c => 
+        allCategories.includes(c.category) && 
+        !selected.find(s => s.id === c.id) &&
+        !usedCategories.has(c.category)
+      );
+      if (availableChoices.length === 0) break;
+      const choice = weightedRandomChoice(availableChoices);
+      if (choice) {
+        selected.push(choice);
+        usedCategories.add(choice.category);
+      }
+    }
+    
+    while (selected.length < 4 && selected.length < unselectedChoices.length) {
+      const availableChoices = unselectedChoices.filter(c => 
+        allCategories.includes(c.category) && 
+        !selected.find(s => s.id === c.id)
+      );
+      if (availableChoices.length === 0) break;
+      const choice = weightedRandomChoice(availableChoices);
+      if (choice) {
+        selected.push(choice);
+      }
+    }
+  }
+  
   return selected;
 }
 
@@ -1014,6 +1020,23 @@ app.post('/api/facilitator', async (req, res) => {
     let selectedChoice = null;
     let updates = {};
     
+    let next = { ...(state || {}) };
+    
+    if (!next.currentPhase) next.currentPhase = 0;
+    if (!next.turnInPhase) next.turnInPhase = 1;
+    if (!next.totalTurns) next.totalTurns = 0;
+    
+    if (!next.phaseAlertLevel) {
+      const currentPhase = PHASES[next.currentPhase];
+      if (currentPhase) {
+        if (currentPhase.baseAlertLevel) {
+          next.phaseAlertLevel = currentPhase.baseAlertLevel;
+        } else if (currentPhase.alertOptions && currentPhase.alertOptions.length > 0) {
+          next.phaseAlertLevel = currentPhase.alertOptions[0];
+        }
+      }
+    }
+    
     if (selectedChoiceId) {
       selectedChoice = CHOICES_DATA.choices.find(c => c.id === selectedChoiceId);
       
@@ -1037,20 +1060,15 @@ app.post('/api/facilitator', async (req, res) => {
           updates = { ...updates, ...customUpdates };
         }
       }
-    }
-
-    let next = applySafetyRules(state || {}, updates);
-
-    // Only increment turns when a choice was actually selected
-    if (selectedChoiceId) {
+      
       next.totalTurns = (next.totalTurns || 0) + 1;
       next.turnInPhase = (next.turnInPhase || 0) + 1;
       next.turn = next.totalTurns;
       
-      // Check if we need to advance to next phase
       if (next.turnInPhase > PHASES[next.currentPhase].turnsInPhase) {
         next.currentPhase++;
         next.turnInPhase = 1;
+        next.phaseData = next.phaseData || {};
         next.phaseData.turn1Categories = [];
         
         if (next.familyLocations) {
@@ -1060,7 +1078,21 @@ app.post('/api/facilitator', async (req, res) => {
           });
         }
       }
+      
+      if (next.turnInPhase === 1) {
+        const currentPhase = PHASES[next.currentPhase];
+        if (currentPhase) {
+          if (currentPhase.baseAlertLevel) {
+            next.phaseAlertLevel = currentPhase.baseAlertLevel;
+          } else if (currentPhase.alertOptions && currentPhase.alertOptions.length > 0) {
+            const prevAlertLevel = next.phaseAlertLevel || "なし";
+            next.phaseAlertLevel = selectAlertLevel(prevAlertLevel, currentPhase.alertOptions);
+          }
+        }
+      }
     }
+
+    next = applySafetyRules(next, updates);
 
     const d = updates?.scoreDelta || {};
     if (d && Object.keys(d).length > 0) {
@@ -1168,7 +1200,7 @@ JSON形式で返してください:
       alertLevel: next.phaseAlertLevel
     };
 
-    res.json({ 
+    res.json({
       narration: safeNarr, 
       choices: choices.map(c => ({ id: c.id, text: c.text, category: c.category })), 
       state: next,
