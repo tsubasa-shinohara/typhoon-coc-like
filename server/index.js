@@ -1016,15 +1016,15 @@ app.post('/api/facilitator', async (req, res) => {
   try {
     const { messages, state, selectedChoiceId } = req.body;
 
-    if (!selectedChoiceId) {
-      return res.status(400).json({ error: '選択肢を選んでください' });
-    }
-
     let selectedChoice = null;
     let updates = {};
     
     if (selectedChoiceId) {
       selectedChoice = CHOICES_DATA.choices.find(c => c.id === selectedChoiceId);
+      
+      if (!selectedChoice) {
+        return res.status(400).json({ error: '選択肢が見つかりません' });
+      }
       
       if (selectedChoice) {
         updates.scoreDelta = selectedChoice.scoreDelta;
