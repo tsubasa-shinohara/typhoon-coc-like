@@ -890,6 +890,22 @@ function selectChoicesByTurn(availableChoices, turnInPhase, state) {
     }
   }
   
+  // Final fallback: if we still don't have 4 choices, allow category duplication
+  if (selected.length < 4) {
+    const allCategories = [...ACTIVE_CATEGORIES, WAITING_CATEGORY];
+    while (selected.length < 4 && selected.length < unselectedChoices.length) {
+      const availableChoices = unselectedChoices.filter(c => 
+        allCategories.includes(c.category) && 
+        !selected.find(s => s.id === c.id)
+      );
+      if (availableChoices.length === 0) break;
+      const choice = weightedRandomChoice(availableChoices);
+      if (choice) {
+        selected.push(choice);
+      }
+    }
+  }
+  
   return selected;
 }
 
@@ -1058,6 +1074,18 @@ app.post('/api/facilitator', async (req, res) => {
             if (x.location === 'unknown') return { ...x, location: 'home' };
             return x;
           });
+        }
+      }
+    }
+
+    if (next.turnInPhase === 1) {
+      const currentPhase = PHASES[next.currentPhase];
+      if (currentPhase) {
+        if (currentPhase.baseAlertLevel) {
+          next.phaseAlertLevel = currentPhase.baseAlertLevel;
+        } else if (currentPhase.alertOptions && currentPhase.alertOptions.length > 0) {
+          const prevAlertLevel = next.phaseAlertLevel || "なし";
+          next.phaseAlertLevel = selectAlertLevel(prevAlertLevel, currentPhase.alertOptions);
         }
       }
     }
