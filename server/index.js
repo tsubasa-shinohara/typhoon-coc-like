@@ -890,15 +890,6 @@ function selectChoicesByTurn(availableChoices, turnInPhase, state) {
     }
   }
   
-  while (selected.length < 4 && selected.length < unselectedChoices.length) {
-    const remaining = unselectedChoices.filter(c => !selected.find(s => s.id === c.id));
-    if (remaining.length === 0) break;
-    const choice = weightedRandomChoice(remaining);
-    if (choice) {
-      selected.push(choice);
-    }
-  }
-  
   return selected;
 }
 
