@@ -11,7 +11,16 @@ const app = express();
 app.use(cors());
 app.use(bodyParser.json());
 
-const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+let client = null;
+try {
+  if (process.env.OPENAI_API_KEY) {
+    client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+  } else {
+    console.warn('⚠️  OPENAI_API_KEY not set - AI narration will be skipped');
+  }
+} catch (err) {
+  console.warn('⚠️  Failed to initialize OpenAI client:', err.message);
+}
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -623,11 +632,11 @@ function applySafetyRules(prev = {}, proposed = {}) {
     }
   }
 
-  if (t <= 2 && !hasAdvisories && !hasWarnings && !hasSpecial) {
+  if (s.turn <= 2 && !hasAdvisories && !hasWarnings && !hasSpecial) {
     s.jma.advisories.push('強風注意報');
   }
 
-  if (t >= 3 && t <= 4 && !hasWarnings && !hasSpecial) {
+  if (s.turn >= 3 && s.turn <= 4 && !hasWarnings && !hasSpecial) {
     if (hasAdvisories && !hasWarnings) {
       s.jma.warnings.push('大雨警報');
     } else if (!hasAdvisories && !hasWarnings) {
@@ -635,7 +644,7 @@ function applySafetyRules(prev = {}, proposed = {}) {
     }
   }
 
-  if (t >= 5 && !hasSpecial) {
+  if (s.turn >= 5 && !hasSpecial) {
     const rainWarnDuration = s._warnDuration?.RAIN || 0;
     const windWarnDuration = s._warnDuration?.WIND || 0;
     
@@ -1090,16 +1099,20 @@ JSON形式で返してください:
 }`;
 
       try {
-        const r = await client.responses.create({
-          model: 'gpt-4o-mini',
-          input: [
-            { role: 'user', content: narrationPrompt }
-          ],
-        });
+        if (client) {
+          const r = await client.responses.create({
+            model: 'gpt-4o-mini',
+            input: [
+              { role: 'user', content: narrationPrompt }
+            ],
+          });
 
-        const output = (r.output_text || '').trim();
-        const narrationData = JSON.parse(output);
-        aiNarration = narrationData?.narration || '';
+          const output = (r.output_text || '').trim();
+          const narrationData = JSON.parse(output);
+          aiNarration = narrationData?.narration || '';
+        } else {
+          aiNarration = '風がうなり、家は小さく軋む。';
+        }
       } catch (err) {
         console.error('AIナレーション生成エラー:', err);
         aiNarration = '風がうなり、家は小さく軋む。';
@@ -1217,17 +1230,19 @@ JSON形式:
   let advice = '引き続き防災意識を高めていきましょう。';
   
   try {
-    const r = await client.responses.create({
-      model: 'gpt-4o-mini',
-      input: [
-        { role: 'user', content: reportPrompt }
-      ],
-    });
+    if (client) {
+      const r = await client.responses.create({
+        model: 'gpt-4o-mini',
+        input: [
+          { role: 'user', content: reportPrompt }
+        ],
+      });
 
-    const output = (r.output_text || '').trim();
-    const reportData = JSON.parse(output);
-    report = reportData?.report || report;
-    advice = reportData?.advice || advice;
+      const output = (r.output_text || '').trim();
+      const reportData = JSON.parse(output);
+      report = reportData?.report || report;
+      advice = reportData?.advice || advice;
+    }
   } catch (err) {
     console.error('最終レポート生成エラー:', err);
   }

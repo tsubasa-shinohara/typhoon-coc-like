@@ -170,12 +170,14 @@ export default function App() {
                     selectedChoiceId: null,
                 });
                 const { narration, choices, state: newState, phaseInfo: newPhaseInfo } = res.data;
-                if (choices) {
+                
+                // Merge newState and choices in one setState to avoid race condition
+                if (newState) {
+                    setState({ ...newState, _choices: choices || null });
+                } else if (choices) {
                     setState((s) => ({ ...s, _choices: choices }));
                 }
-                if (newState) {
-                    setState(newState);
-                }
+                
                 if (newPhaseInfo) {
                     setPhaseInfo(newPhaseInfo);
                 }
