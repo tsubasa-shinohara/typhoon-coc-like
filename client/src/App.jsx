@@ -464,7 +464,7 @@ export default function App() {
 
             {/* ステータス行 */}
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 10 }}>
-                {phaseInfo && <Badge color="blue">{phaseInfo.phaseName}</Badge>}
+                {phaseInfo && <Badge color="blue">{phaseInfo.phaseName}（{phaseInfo.turnInPhase}/3ターン）</Badge>}
                 {powerBadge}
                 {signalBadge}
                 {floodBadge}
@@ -488,7 +488,7 @@ export default function App() {
             {/* フェーズ情報 */}
             {phaseInfo && (
                 <div style={{ padding: 10, border: '2px solid #4A90E2', borderRadius: 8, background: '#E3F2FD', marginBottom: 10, fontSize: 14 }}>
-                    <strong>{phaseInfo.phaseName}</strong> - 行動 {phaseInfo.turnInPhase}/3
+                    <strong>{phaseInfo.phaseName}（{phaseInfo.turnInPhase}/3ターン）</strong>
                     {phaseInfo.alertLevel && phaseInfo.alertLevel !== 'なし' && (
                         <span style={{ marginLeft: 10, color: '#d32f2f' }}>【{phaseInfo.alertLevel}】</span>
                     )}
