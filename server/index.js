@@ -103,34 +103,8 @@ function applySafetyRules(prev = {}, proposed = {}) {
   if (!s.phaseData) s.phaseData = {};
   if (!s.flags) s.flags = [];
   
-  s.totalTurns = (s.totalTurns || 0) + 1;
-  s.turnInPhase = (s.turnInPhase || 0) + 1;
+  // Turn increment moved to endpoint handler to only increment when a choice is selected
   s.turn = s.totalTurns; // 互換性のため
-  
-  if (s.turnInPhase > PHASES[s.currentPhase].turnsInPhase) {
-    s.currentPhase++;
-    s.turnInPhase = 1;
-    s.phaseData.turn1Categories = [];
-    
-    if (s.familyLocations) {
-      s.familyLocations = s.familyLocations.map(m => {
-        if (m.location === 'away') {
-          return { ...m, location: Math.random() < 0.7 ? 'home' : 'safe_away' };
-        }
-        return m;
-      });
-    }
-    
-    if (s.currentPhase < PHASES.length) {
-      const phase = PHASES[s.currentPhase];
-      if (phase.baseAlertLevel) {
-        s.phaseAlertLevel = phase.baseAlertLevel;
-      } else if (phase.alertOptions) {
-        const prevLevel = s.phaseAlertLevel || "なし";
-        s.phaseAlertLevel = selectAlertLevel(prevLevel, phase.alertOptions);
-      }
-    }
-  }
   
   if (s.currentPhase >= 4 && !s.gameEnded) {
     s.gameEnded = true;
@@ -835,7 +809,8 @@ function selectChoicesByTurn(availableChoices, turnInPhase, state) {
     const turn1Cats = state.phaseData?.turn1Categories || [];
     const remainingCategories = ACTIVE_CATEGORIES.filter(cat => !turn1Cats.includes(cat));
     
-    for (const category of remainingCategories.slice(0, 2)) {
+    // Add remaining categories from Turn 1
+    for (const category of remainingCategories) {
       const categoryChoices = unselectedChoices.filter(c => c.category === category);
       if (categoryChoices.length > 0) {
         const choice = weightedRandomChoice(categoryChoices);
@@ -846,6 +821,17 @@ function selectChoicesByTurn(availableChoices, turnInPhase, state) {
       }
     }
     
+    // Add one waiting category choice
+    const waitingChoices = unselectedChoices.filter(c => c.category === WAITING_CATEGORY);
+    if (waitingChoices.length > 0) {
+      const choice = weightedRandomChoice(waitingChoices);
+      if (choice && !selected.find(s => s.id === choice.id)) {
+        selected.push(choice);
+        usedCategories.add(WAITING_CATEGORY);
+      }
+    }
+    
+    // Add triggered choices if available
     if (triggeredChoices.length > 0 && selected.length < 4) {
       const triggeredChoice = weightedRandomChoice(triggeredChoices);
       if (triggeredChoice && !selected.find(s => s.id === triggeredChoice.id)) {
@@ -854,18 +840,22 @@ function selectChoicesByTurn(availableChoices, turnInPhase, state) {
       }
     }
     
+    // Fill remaining slots, ensuring no category duplication
     while (selected.length < 4 && selected.length < unselectedChoices.length) {
       const activeChoices = unselectedChoices.filter(c => 
         ACTIVE_CATEGORIES.includes(c.category) && 
-        !selected.find(s => s.id === c.id)
+        !selected.find(s => s.id === c.id) &&
+        !usedCategories.has(c.category)
       );
       if (activeChoices.length === 0) break;
       const choice = weightedRandomChoice(activeChoices);
       if (choice) {
         selected.push(choice);
+        usedCategories.add(choice.category);
       }
     }
   } else if (turnInPhase === 3) {
+    // Add one waiting category choice (required)
     const waitingChoices = unselectedChoices.filter(c => c.category === WAITING_CATEGORY);
     if (waitingChoices.length > 0) {
       const choice = weightedRandomChoice(waitingChoices);
@@ -875,22 +865,27 @@ function selectChoicesByTurn(availableChoices, turnInPhase, state) {
       }
     }
     
+    // Add triggered choices if available
     if (triggeredChoices.length > 0 && selected.length < 4) {
       const triggeredChoice = weightedRandomChoice(triggeredChoices);
       if (triggeredChoice && !selected.find(s => s.id === triggeredChoice.id)) {
         selected.push(triggeredChoice);
+        usedCategories.add(triggeredChoice.category);
       }
     }
     
+    // Fill remaining slots, ensuring no category duplication
     while (selected.length < 4 && selected.length < unselectedChoices.length) {
       const activeChoices = unselectedChoices.filter(c => 
         ACTIVE_CATEGORIES.includes(c.category) && 
-        !selected.find(s => s.id === c.id)
+        !selected.find(s => s.id === c.id) &&
+        !usedCategories.has(c.category)
       );
       if (activeChoices.length === 0) break;
       const choice = weightedRandomChoice(activeChoices);
       if (choice) {
         selected.push(choice);
+        usedCategories.add(choice.category);
       }
     }
   }
@@ -1054,6 +1049,27 @@ app.post('/api/facilitator', async (req, res) => {
     }
 
     let next = applySafetyRules(state || {}, updates);
+
+    // Only increment turns when a choice was actually selected
+    if (selectedChoiceId) {
+      next.totalTurns = (next.totalTurns || 0) + 1;
+      next.turnInPhase = (next.turnInPhase || 0) + 1;
+      next.turn = next.totalTurns;
+      
+      // Check if we need to advance to next phase
+      if (next.turnInPhase > PHASES[next.currentPhase].turnsInPhase) {
+        next.currentPhase++;
+        next.turnInPhase = 1;
+        next.phaseData.turn1Categories = [];
+        
+        if (next.familyLocations) {
+          next.familyLocations = next.familyLocations.map(x => {
+            if (x.location === 'unknown') return { ...x, location: 'home' };
+            return x;
+          });
+        }
+      }
+    }
 
     const d = updates?.scoreDelta || {};
     if (d && Object.keys(d).length > 0) {
