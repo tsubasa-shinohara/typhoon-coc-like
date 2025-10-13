@@ -41,6 +41,45 @@ const PHASES = [
   { id: "T+6h", name: "通過後6時間経過", turnsInPhase: 3, baseAlertLevel: "なし" }
 ];
 
+const EVACUATION_TURNS = [
+  {
+    id: 1,
+    name: "出発準備",
+    description: "避難の準備を整え、家を出発する",
+    canBeSkipped: false
+  },
+  {
+    id: 2,
+    name: "迂回路の発生",
+    description: "通常ルートが使えず、迂回を余儀なくされる",
+    canBeSkipped: true,
+    skipFlag: "経路確認済み",
+    skipReason: "避難経路を事前確認していたため、迂回せずに進めた"
+  },
+  {
+    id: 3,
+    name: "障害物出現",
+    description: "道中に障害物が現れる",
+    canBeSkipped: true,
+    skipFlag: "近隣声掛け済み",
+    skipReason: "近所の人と協力して障害物を迅速に処理できた"
+  },
+  {
+    id: 4,
+    name: "救助を求める声",
+    description: "避難中に助けを求める声が聞こえる",
+    canBeSkipped: false
+  },
+  {
+    id: 5,
+    name: "避難所到着に際し",
+    description: "避難所に到着し、運営への協力を求められる",
+    canBeSkipped: false,
+    requiresStaminaCheck: true,
+    staminaThreshold: 35
+  }
+];
+
 // ====== 選択肢データ読み込み ======
 let CHOICES_DATA;
 try {
@@ -111,6 +150,26 @@ function applySafetyRules(prev = {}, proposed = {}) {
   if (typeof s.currentStamina !== 'number') s.currentStamina = 100;
   if (!s.maxStamina) s.maxStamina = 100;
   if (!s.staminaPenaltyActive) s.staminaPenaltyActive = false;
+  
+  // Initialize phase alert level from PHASES configuration
+  console.log(`[applySafetyRules] Before init: currentPhase=${s.currentPhase}, turnInPhase=${s.turnInPhase}, phaseAlertLevel=${s.phaseAlertLevel}`);
+  if (!s.phaseAlertLevel || (s.currentPhase === 0 && s.turnInPhase <= 1)) {
+    const currentPhase = PHASES[s.currentPhase] || PHASES[0];
+    console.log(`[applySafetyRules] Initializing phaseAlertLevel from PHASES[${s.currentPhase}]`, currentPhase);
+    if (currentPhase.baseAlertLevel) {
+      s.phaseAlertLevel = currentPhase.baseAlertLevel;
+      console.log(`[applySafetyRules] Set phaseAlertLevel to baseAlertLevel: ${s.phaseAlertLevel}`);
+    } else if (currentPhase.alertOptions) {
+      s.phaseAlertLevel = selectAlertLevel("なし", currentPhase.alertOptions);
+      console.log(`[applySafetyRules] Set phaseAlertLevel via selectAlertLevel: ${s.phaseAlertLevel}`);
+    } else {
+      s.phaseAlertLevel = "なし";
+      console.log(`[applySafetyRules] Set phaseAlertLevel to default: なし`);
+    }
+  } else {
+    console.log(`[applySafetyRules] Skipped init: condition false`);
+  }
+  console.log(`[applySafetyRules] After init: phaseAlertLevel=${s.phaseAlertLevel}`);
   
   // Turn increment moved to endpoint handler to only increment when a choice is selected
   s.turn = s.totalTurns; // 互換性のため
@@ -232,21 +291,6 @@ function applySafetyRules(prev = {}, proposed = {}) {
   const lastChoiceId = prev._lastChoiceId || '';
 
   // ------------------------------------------------------------
-  // ------------------------------------------------------------
-  const neighborKeywords = ['声をかけ', '呼びかけ', '周囲', '近所', '周りに', '隣人', 'コンタクト', '声掛け'];
-  if (neighborKeywords.some(k => lastAction.includes(k))) {
-    s.neighborOutreach = true;
-  }
-
-  const routeKeywords = ['経路', 'ルート', '地図', 'マップ'];
-  const confirmKeywords = ['確認', 'チェック', '調べ'];
-  const hasRouteKeyword = routeKeywords.some(k => lastAction.includes(k));
-  const hasConfirmKeyword = confirmKeywords.some(k => lastAction.includes(k));
-  if (hasRouteKeyword && hasConfirmKeyword) {
-    s.routeConfirmed = true;
-  }
-
-  // ------------------------------------------------------------
   // proposed.evac の安全マージ（上書き事故を防止）
   // ------------------------------------------------------------
   if (proposed.evac) {
@@ -279,14 +323,23 @@ function applySafetyRules(prev = {}, proposed = {}) {
     }
   }
 
-  if (s.evac.status === 'en_route' && s.evac.turnsRequired) {
-    let reduction = 0;
-    if (s.neighborOutreach) reduction += 1;
-    if (s.routeConfirmed) reduction += 1;
+  if (s.evac.status === 'en_route' && !s.evacuationSkippedTurns) {
+    const skippedTurns = [];
     
-    if (reduction > 0) {
-      s.evac.turnsRequired = Math.max(1, s.evac.turnsRequired - reduction);
+    for (const turn of EVACUATION_TURNS) {
+      if (turn.canBeSkipped && turn.skipFlag && (s.flags || []).includes(turn.skipFlag)) {
+        skippedTurns.push({
+          turnId: turn.id,
+          turnName: turn.name,
+          reason: turn.skipReason
+        });
+      }
     }
+    
+    s.evacuationSkippedTurns = skippedTurns;
+    const maxTurns = EVACUATION_TURNS.length - skippedTurns.length;
+    s.evacuationMaxTurns = maxTurns;
+    s.evacuationRequiredTurns = maxTurns;
   }
 
   if (s.carUse && !s.scenario?.hasElderly && s.evac.status === 'en_route') {
@@ -308,6 +361,7 @@ function applySafetyRules(prev = {}, proposed = {}) {
     s.currentScene = 'evacuation';
     s.evacuationStartPhase = s.currentPhase;
     s.evacuationTurnsElapsed = 0;
+    s.evacuationSkippedTurns = null;
     s.awaitingEvacuationMethod = false;
     
     if (lastChoiceId === 'evacuate_by_car') {
@@ -806,6 +860,13 @@ function filterAvailableChoices(state) {
       }
     }
     
+    if (currentScene === 'shelter' && choice.shelterBranch) {
+      const finalChoice = state.evacuationFinalChoice;
+      if (choice.shelterBranch !== finalChoice) {
+        return false;
+      }
+    }
+    
     return true;
   });
 }
@@ -827,9 +888,58 @@ function weightedRandomChoice(choices) {
   return choices[choices.length - 1];
 }
 
+function getCurrentEvacuationTurn(state) {
+  if (state.currentScene !== 'evacuation') return null;
+  
+  const elapsedTurns = state.evacuationTurnsElapsed || 0;
+  const skippedTurns = state.evacuationSkippedTurns || [];
+  const skippedTurnIds = skippedTurns.map(st => st.turnId);
+  
+  let elapsedCount = 0;
+  
+  for (let i = 0; i < EVACUATION_TURNS.length; i++) {
+    const turn = EVACUATION_TURNS[i];
+    if (skippedTurnIds.includes(turn.id)) {
+      continue;
+    }
+    
+    if (elapsedCount === elapsedTurns) {
+      return turn;
+    }
+    elapsedCount++;
+  }
+  
+  return null;
+}
+
 function selectChoicesByTurn(availableChoices, turnInPhase, state) {
   const ACTIVE_CATEGORIES = ['情報系', 'コミュニケーション系', '物資準備系', '住宅対策系', '避難行動系'];
   const WAITING_CATEGORY = '待機・時間調整系';
+  
+  if (state.currentScene === 'evacuation') {
+    const currentTurn = getCurrentEvacuationTurn(state);
+    if (!currentTurn) return [];
+    
+    const turnChoices = availableChoices.filter(c => 
+      c.evacuationTurn === currentTurn.id
+    );
+    
+    if (currentTurn.id === 5 && currentTurn.requiresStaminaCheck) {
+      const hasHighStamina = state.currentStamina >= currentTurn.staminaThreshold;
+      return turnChoices.filter(c => {
+        if (c.requiresHighStamina && !hasHighStamina) return false;
+        if (c.requiresLowStamina && hasHighStamina) return false;
+        return true;
+      }).slice(0, 4);
+    }
+    
+    return turnChoices.slice(0, 4);
+  }
+  
+  const currentPhase = PHASES[state.currentPhase];
+  if (currentPhase && currentPhase.id === 'T+6h') {
+    return [];
+  }
   
   const unselectedChoices = availableChoices.filter(c => 
     !state.selectedChoiceIds || !state.selectedChoiceIds.includes(c.id)
@@ -1199,16 +1309,47 @@ app.post('/api/facilitator', async (req, res) => {
           next.currentStamina = 30;
           next.turnInPhase = 0;
           next.phaseData.turn1Categories = [];
+          
+          // Set phase alert level from PHASES configuration
+          const newPhase = PHASES[next.currentPhase];
+          if (newPhase) {
+            if (newPhase.baseAlertLevel) {
+              next.phaseAlertLevel = newPhase.baseAlertLevel;
+            } else if (newPhase.alertOptions) {
+              const prevAlertLevel = next.phaseAlertLevel || "なし";
+              next.phaseAlertLevel = selectAlertLevel(prevAlertLevel, newPhase.alertOptions);
+            }
+          }
         }
       }
       
       if (next.currentScene === 'evacuation') {
         next.evacuationTurnsElapsed = (next.evacuationTurnsElapsed || 0) + 1;
+        
+        const currentTurn = getCurrentEvacuationTurn(next);
+        if (currentTurn && currentTurn.id === 5 && selectedChoiceId) {
+          if (selectedChoiceId === 'evac_turn5_help' || (selectedChoice?.text && selectedChoice.text.includes('運営を手伝う'))) {
+            next.evacuationFinalChoice = 'help_operations';
+          } else if (selectedChoiceId === 'evac_turn5_rest' || (selectedChoice?.text && selectedChoice.text.includes('休む'))) {
+            next.evacuationFinalChoice = 'rest';
+          }
+        }
       } else if (next.currentScene === 'shelter') {
         if (next.turnInPhase >= 1) {
           next.currentPhase++;
           next.turnInPhase = 1;
           next.phaseData.turn1Categories = [];
+          
+          // Set phase alert level from PHASES configuration
+          const newPhase = PHASES[next.currentPhase];
+          if (newPhase) {
+            if (newPhase.baseAlertLevel) {
+              next.phaseAlertLevel = newPhase.baseAlertLevel;
+            } else if (newPhase.alertOptions) {
+              const prevAlertLevel = next.phaseAlertLevel || "なし";
+              next.phaseAlertLevel = selectAlertLevel(prevAlertLevel, newPhase.alertOptions);
+            }
+          }
         } else {
           next.turnInPhase++;
         }
@@ -1220,6 +1361,17 @@ app.post('/api/facilitator', async (req, res) => {
           next.currentPhase++;
           next.turnInPhase = 1;
           next.phaseData.turn1Categories = [];
+          
+          // Set phase alert level from PHASES configuration
+          const newPhase = PHASES[next.currentPhase];
+          if (newPhase) {
+            if (newPhase.baseAlertLevel) {
+              next.phaseAlertLevel = newPhase.baseAlertLevel;
+            } else if (newPhase.alertOptions) {
+              const prevAlertLevel = next.phaseAlertLevel || "なし";
+              next.phaseAlertLevel = selectAlertLevel(prevAlertLevel, newPhase.alertOptions);
+            }
+          }
           
           if (next.familyLocations) {
             next.familyLocations = next.familyLocations.map(x => {
