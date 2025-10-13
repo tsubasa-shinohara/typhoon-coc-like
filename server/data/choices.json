@@ -2089,6 +2089,7 @@
       "category": "避難行動系",
       "text": "持ち物を最終確認する",
       "evacuationTurn": 1,
+      "transportMethod": "foot",
       "availableScenes": [
         "evacuation"
       ],
@@ -2133,6 +2134,7 @@
       "category": "コミュニケーション系",
       "text": "家族に声をかける",
       "evacuationTurn": 1,
+      "transportMethod": "foot",
       "availableScenes": [
         "evacuation"
       ],
@@ -2177,6 +2179,7 @@
       "category": "情報系",
       "text": "外の状況を確認する",
       "evacuationTurn": 1,
+      "transportMethod": "foot",
       "availableScenes": [
         "evacuation"
       ],
@@ -2221,6 +2224,7 @@
       "category": "待機・時間調整系",
       "text": "深呼吸して落ち着く",
       "evacuationTurn": 1,
+      "transportMethod": "foot",
       "availableScenes": [
         "evacuation"
       ],
@@ -2265,6 +2269,7 @@
       "category": "避難行動系",
       "text": "別ルートを探す",
       "evacuationTurn": 2,
+      "transportMethod": "foot",
       "availableScenes": [
         "evacuation"
       ],
@@ -2309,6 +2314,7 @@
       "category": "情報系",
       "text": "周囲の人に道を尋ねる",
       "evacuationTurn": 2,
+      "transportMethod": "foot",
       "availableScenes": [
         "evacuation"
       ],
@@ -2353,6 +2359,7 @@
       "category": "避難行動系",
       "text": "慎重に迂回路を進む",
       "evacuationTurn": 2,
+      "transportMethod": "foot",
       "availableScenes": [
         "evacuation"
       ],
@@ -2397,6 +2404,7 @@
       "category": "待機・時間調整系",
       "text": "少し休憩する",
       "evacuationTurn": 2,
+      "transportMethod": "foot",
       "availableScenes": [
         "evacuation"
       ],
@@ -2441,6 +2449,7 @@
       "category": "避難行動系",
       "text": "障害物を避けて進む",
       "evacuationTurn": 3,
+      "transportMethod": "foot",
       "availableScenes": [
         "evacuation"
       ],
@@ -2485,6 +2494,7 @@
       "category": "コミュニケーション系",
       "text": "周囲の人と協力して障害物を除去する",
       "evacuationTurn": 3,
+      "transportMethod": "foot",
       "availableScenes": [
         "evacuation"
       ],
@@ -2529,6 +2539,7 @@
       "category": "避難行動系",
       "text": "別の道を探す",
       "evacuationTurn": 3,
+      "transportMethod": "foot",
       "availableScenes": [
         "evacuation"
       ],
@@ -2573,6 +2584,7 @@
       "category": "待機・時間調整系",
       "text": "一旦立ち止まり状況を確認する",
       "evacuationTurn": 3,
+      "transportMethod": "foot",
       "availableScenes": [
         "evacuation"
       ],
@@ -2617,6 +2629,7 @@
       "category": "コミュニケーション系",
       "text": "助けを求める人を手伝う",
       "evacuationTurn": 4,
+      "transportMethod": "foot",
       "availableScenes": [
         "evacuation"
       ],
@@ -2661,6 +2674,7 @@
       "category": "情報系",
       "text": "救助隊に連絡する",
       "evacuationTurn": 4,
+      "transportMethod": "foot",
       "availableScenes": [
         "evacuation"
       ],
@@ -2705,6 +2719,7 @@
       "category": "避難行動系",
       "text": "声をかけるが先を急ぐ",
       "evacuationTurn": 4,
+      "transportMethod": "foot",
       "availableScenes": [
         "evacuation"
       ],
@@ -2749,6 +2764,7 @@
       "category": "待機・時間調整系",
       "text": "状況を見守る",
       "evacuationTurn": 4,
+      "transportMethod": "foot",
       "availableScenes": [
         "evacuation"
       ],
@@ -2793,6 +2809,7 @@
       "category": "コミュニケーション系",
       "text": "避難所の運営を手伝う",
       "evacuationTurn": 5,
+      "transportMethod": "foot",
       "requiresHighStamina": true,
       "availableScenes": [
         "evacuation"
@@ -2840,6 +2857,7 @@
       "category": "待機・時間調整系",
       "text": "避難所で休む",
       "evacuationTurn": 5,
+      "transportMethod": "foot",
       "requiresLowStamina": false,
       "availableScenes": [
         "evacuation"
@@ -3239,6 +3257,912 @@
       },
       "feedback": "家族と今後の計画を話し合い、安心感を得ました。",
       "stamina": 5
+    },
+    {
+      "id": "evac_car_turn1_001",
+      "category": "避難行動系",
+      "text": "車の燃料を確認する",
+      "evacuationTurn": 1,
+      "transportMethod": "car",
+      "availableScenes": [
+        "evacuation"
+      ],
+      "availableWhen": {
+        "phases": [
+          "T-24h",
+          "T-12h",
+          "T-6h",
+          "T-3h"
+        ],
+        "alertLevels": [
+          "なし",
+          "注意報",
+          "警報",
+          "特別警報"
+        ],
+        "conditions": {
+          "requireItems": [],
+          "requireFlags": [],
+          "excludeEvacStatus": []
+        }
+      },
+      "weight": 2,
+      "rarity": "common",
+      "scoreDelta": {
+        "生存度": 1,
+        "判断力": 1,
+        "貢献度": 0,
+        "準備度": 1,
+        "文化度": 0
+      },
+      "effects": {
+        "setFlags": [],
+        "addItems": [],
+        "customEffect": null
+      },
+      "feedback": "車の燃料を確認しました。問題なく避難できそうです。",
+      "stamina": -3
+    },
+    {
+      "id": "evac_car_turn1_002",
+      "category": "コミュニケーション系",
+      "text": "同乗者に声をかける",
+      "evacuationTurn": 1,
+      "transportMethod": "car",
+      "availableScenes": [
+        "evacuation"
+      ],
+      "availableWhen": {
+        "phases": [
+          "T-24h",
+          "T-12h",
+          "T-6h",
+          "T-3h"
+        ],
+        "alertLevels": [
+          "なし",
+          "注意報",
+          "警報",
+          "特別警報"
+        ],
+        "conditions": {
+          "requireItems": [],
+          "requireFlags": [],
+          "excludeEvacStatus": []
+        }
+      },
+      "weight": 2,
+      "rarity": "common",
+      "scoreDelta": {
+        "生存度": 0,
+        "判断力": 0,
+        "貢献度": 2,
+        "準備度": 0,
+        "文化度": 1
+      },
+      "effects": {
+        "setFlags": [],
+        "addItems": [],
+        "customEffect": null
+      },
+      "feedback": "全員が車に乗り込んだことを確認しました。",
+      "stamina": 0
+    },
+    {
+      "id": "evac_car_turn1_003",
+      "category": "情報系",
+      "text": "車載ナビで経路を確認する",
+      "evacuationTurn": 1,
+      "transportMethod": "car",
+      "availableScenes": [
+        "evacuation"
+      ],
+      "availableWhen": {
+        "phases": [
+          "T-24h",
+          "T-12h",
+          "T-6h",
+          "T-3h"
+        ],
+        "alertLevels": [
+          "なし",
+          "注意報",
+          "警報",
+          "特別警報"
+        ],
+        "conditions": {
+          "requireItems": [],
+          "requireFlags": [],
+          "excludeEvacStatus": []
+        }
+      },
+      "weight": 2,
+      "rarity": "common",
+      "scoreDelta": {
+        "生存度": 1,
+        "判断力": 2,
+        "貢献度": 0,
+        "準備度": 0,
+        "文化度": 0
+      },
+      "effects": {
+        "setFlags": [],
+        "addItems": [],
+        "customEffect": null
+      },
+      "feedback": "ナビで避難経路を確認しました。渋滞情報も把握できました。",
+      "stamina": 0
+    },
+    {
+      "id": "evac_car_turn1_004",
+      "category": "待機・時間調整系",
+      "text": "深呼吸して落ち着く",
+      "evacuationTurn": 1,
+      "transportMethod": "car",
+      "availableScenes": [
+        "evacuation"
+      ],
+      "availableWhen": {
+        "phases": [
+          "T-24h",
+          "T-12h",
+          "T-6h",
+          "T-3h"
+        ],
+        "alertLevels": [
+          "なし",
+          "注意報",
+          "警報",
+          "特別警報"
+        ],
+        "conditions": {
+          "requireItems": [],
+          "requireFlags": [],
+          "excludeEvacStatus": []
+        }
+      },
+      "weight": 1.5,
+      "rarity": "common",
+      "scoreDelta": {
+        "生存度": 0,
+        "判断力": 1,
+        "貢献度": 0,
+        "準備度": 0,
+        "文化度": 0
+      },
+      "effects": {
+        "setFlags": [],
+        "addItems": [],
+        "customEffect": null
+      },
+      "feedback": "深呼吸をして気持ちを落ち着けました。安全運転を心がけます。",
+      "stamina": 5
+    },
+    {
+      "id": "evac_car_turn2_001",
+      "category": "避難行動系",
+      "text": "別ルートを探す",
+      "evacuationTurn": 2,
+      "transportMethod": "car",
+      "availableScenes": [
+        "evacuation"
+      ],
+      "availableWhen": {
+        "phases": [
+          "T-24h",
+          "T-12h",
+          "T-6h",
+          "T-3h"
+        ],
+        "alertLevels": [
+          "なし",
+          "注意報",
+          "警報",
+          "特別警報"
+        ],
+        "conditions": {
+          "requireItems": [],
+          "requireFlags": [],
+          "excludeEvacStatus": []
+        }
+      },
+      "weight": 2,
+      "rarity": "common",
+      "scoreDelta": {
+        "生存度": 2,
+        "判断力": 2,
+        "貢献度": 0,
+        "準備度": 0,
+        "文化度": 0
+      },
+      "effects": {
+        "setFlags": [],
+        "addItems": [],
+        "customEffect": null
+      },
+      "feedback": "道路が冠水しているため、別ルートを探しました。",
+      "stamina": -5
+    },
+    {
+      "id": "evac_car_turn2_002",
+      "category": "情報系",
+      "text": "ラジオで道路情報を確認する",
+      "evacuationTurn": 2,
+      "transportMethod": "car",
+      "availableScenes": [
+        "evacuation"
+      ],
+      "availableWhen": {
+        "phases": [
+          "T-24h",
+          "T-12h",
+          "T-6h",
+          "T-3h"
+        ],
+        "alertLevels": [
+          "なし",
+          "注意報",
+          "警報",
+          "特別警報"
+        ],
+        "conditions": {
+          "requireItems": [],
+          "requireFlags": [],
+          "excludeEvacStatus": []
+        }
+      },
+      "weight": 2,
+      "rarity": "common",
+      "scoreDelta": {
+        "生存度": 1,
+        "判断力": 2,
+        "貢献度": 0,
+        "準備度": 0,
+        "文化度": 0
+      },
+      "effects": {
+        "setFlags": [],
+        "addItems": [],
+        "customEffect": null
+      },
+      "feedback": "ラジオから最新の道路状況を把握しました。",
+      "stamina": 0
+    },
+    {
+      "id": "evac_car_turn2_003",
+      "category": "避難行動系",
+      "text": "慎重に迂回路を進む",
+      "evacuationTurn": 2,
+      "transportMethod": "car",
+      "availableScenes": [
+        "evacuation"
+      ],
+      "availableWhen": {
+        "phases": [
+          "T-24h",
+          "T-12h",
+          "T-6h",
+          "T-3h"
+        ],
+        "alertLevels": [
+          "なし",
+          "注意報",
+          "警報",
+          "特別警報"
+        ],
+        "conditions": {
+          "requireItems": [],
+          "requireFlags": [],
+          "excludeEvacStatus": []
+        }
+      },
+      "weight": 2,
+      "rarity": "common",
+      "scoreDelta": {
+        "生存度": 2,
+        "判断力": 1,
+        "貢献度": 0,
+        "準備度": 0,
+        "文化度": 0
+      },
+      "effects": {
+        "setFlags": [],
+        "addItems": [],
+        "customEffect": null
+      },
+      "feedback": "速度を落として、慎重に迂回路を進みました。",
+      "stamina": -3
+    },
+    {
+      "id": "evac_car_turn2_004",
+      "category": "待機・時間調整系",
+      "text": "少し停車して休憩する",
+      "evacuationTurn": 2,
+      "transportMethod": "car",
+      "availableScenes": [
+        "evacuation"
+      ],
+      "availableWhen": {
+        "phases": [
+          "T-24h",
+          "T-12h",
+          "T-6h",
+          "T-3h"
+        ],
+        "alertLevels": [
+          "なし",
+          "注意報",
+          "警報",
+          "特別警報"
+        ],
+        "conditions": {
+          "requireItems": [],
+          "requireFlags": [],
+          "excludeEvacStatus": []
+        }
+      },
+      "weight": 1.5,
+      "rarity": "common",
+      "scoreDelta": {
+        "生存度": 0,
+        "判断力": 1,
+        "貢献度": 0,
+        "準備度": 0,
+        "文化度": 0
+      },
+      "effects": {
+        "setFlags": [],
+        "addItems": [],
+        "customEffect": null
+      },
+      "feedback": "安全な場所で少し停車し、休憩しました。",
+      "stamina": 5
+    },
+    {
+      "id": "evac_car_turn3_001",
+      "category": "避難行動系",
+      "text": "倒木を避けて進む",
+      "evacuationTurn": 3,
+      "transportMethod": "car",
+      "availableScenes": [
+        "evacuation"
+      ],
+      "availableWhen": {
+        "phases": [
+          "T-24h",
+          "T-12h",
+          "T-6h",
+          "T-3h"
+        ],
+        "alertLevels": [
+          "なし",
+          "注意報",
+          "警報",
+          "特別警報"
+        ],
+        "conditions": {
+          "requireItems": [],
+          "requireFlags": [],
+          "excludeEvacStatus": []
+        }
+      },
+      "weight": 2,
+      "rarity": "common",
+      "scoreDelta": {
+        "生存度": 2,
+        "判断力": 1,
+        "貢献度": 0,
+        "準備度": 0,
+        "文化度": 0
+      },
+      "effects": {
+        "setFlags": [],
+        "addItems": [],
+        "customEffect": null
+      },
+      "feedback": "道路に倒れた木を注意深く避けて通過しました。",
+      "stamina": -5
+    },
+    {
+      "id": "evac_car_turn3_002",
+      "category": "コミュニケーション系",
+      "text": "周囲の車と情報を共有する",
+      "evacuationTurn": 3,
+      "transportMethod": "car",
+      "availableScenes": [
+        "evacuation"
+      ],
+      "availableWhen": {
+        "phases": [
+          "T-24h",
+          "T-12h",
+          "T-6h",
+          "T-3h"
+        ],
+        "alertLevels": [
+          "なし",
+          "注意報",
+          "警報",
+          "特別警報"
+        ],
+        "conditions": {
+          "requireItems": [],
+          "requireFlags": [],
+          "excludeEvacStatus": []
+        }
+      },
+      "weight": 2,
+      "rarity": "common",
+      "scoreDelta": {
+        "生存度": 1,
+        "判断力": 1,
+        "貢献度": 2,
+        "準備度": 0,
+        "文化度": 1
+      },
+      "effects": {
+        "setFlags": [],
+        "addItems": [],
+        "customEffect": null
+      },
+      "feedback": "近くの車の人と前方の道路状況を共有しました。",
+      "stamina": 0
+    },
+    {
+      "id": "evac_car_turn3_003",
+      "category": "避難行動系",
+      "text": "別の道を探す",
+      "evacuationTurn": 3,
+      "transportMethod": "car",
+      "availableScenes": [
+        "evacuation"
+      ],
+      "availableWhen": {
+        "phases": [
+          "T-24h",
+          "T-12h",
+          "T-6h",
+          "T-3h"
+        ],
+        "alertLevels": [
+          "なし",
+          "注意報",
+          "警報",
+          "特別警報"
+        ],
+        "conditions": {
+          "requireItems": [],
+          "requireFlags": [],
+          "excludeEvacStatus": []
+        }
+      },
+      "weight": 2,
+      "rarity": "common",
+      "scoreDelta": {
+        "生存度": 2,
+        "判断力": 2,
+        "貢献度": 0,
+        "準備度": 0,
+        "文化度": 0
+      },
+      "effects": {
+        "setFlags": [],
+        "addItems": [],
+        "customEffect": null
+      },
+      "feedback": "障害物が多いため、別の道を探すことにしました。",
+      "stamina": -3
+    },
+    {
+      "id": "evac_car_turn3_004",
+      "category": "待機・時間調整系",
+      "text": "車内で状況を確認する",
+      "evacuationTurn": 3,
+      "transportMethod": "car",
+      "availableScenes": [
+        "evacuation"
+      ],
+      "availableWhen": {
+        "phases": [
+          "T-24h",
+          "T-12h",
+          "T-6h",
+          "T-3h"
+        ],
+        "alertLevels": [
+          "なし",
+          "注意報",
+          "警報",
+          "特別警報"
+        ],
+        "conditions": {
+          "requireItems": [],
+          "requireFlags": [],
+          "excludeEvacStatus": []
+        }
+      },
+      "weight": 1.5,
+      "rarity": "common",
+      "scoreDelta": {
+        "生存度": 0,
+        "判断力": 1,
+        "貢献度": 0,
+        "準備度": 0,
+        "文化度": 0
+      },
+      "effects": {
+        "setFlags": [],
+        "addItems": [],
+        "customEffect": null
+      },
+      "feedback": "一旦停車して、周囲の状況を確認しました。",
+      "stamina": 3
+    },
+    {
+      "id": "evac_car_turn4_001",
+      "category": "コミュニケーション系",
+      "text": "助けを求める人に声をかける",
+      "evacuationTurn": 4,
+      "transportMethod": "car",
+      "availableScenes": [
+        "evacuation"
+      ],
+      "availableWhen": {
+        "phases": [
+          "T-24h",
+          "T-12h",
+          "T-6h",
+          "T-3h"
+        ],
+        "alertLevels": [
+          "なし",
+          "注意報",
+          "警報",
+          "特別警報"
+        ],
+        "conditions": {
+          "requireItems": [],
+          "requireFlags": [],
+          "excludeEvacStatus": []
+        }
+      },
+      "weight": 2,
+      "rarity": "common",
+      "scoreDelta": {
+        "生存度": 1,
+        "判断力": 1,
+        "貢献度": 3,
+        "準備度": 0,
+        "文化度": 1
+      },
+      "effects": {
+        "setFlags": [],
+        "addItems": [],
+        "customEffect": null
+      },
+      "feedback": "困っている人に声をかけ、避難所の場所を教えました。",
+      "stamina": -3
+    },
+    {
+      "id": "evac_car_turn4_002",
+      "category": "情報系",
+      "text": "救助隊に連絡する",
+      "evacuationTurn": 4,
+      "transportMethod": "car",
+      "availableScenes": [
+        "evacuation"
+      ],
+      "availableWhen": {
+        "phases": [
+          "T-24h",
+          "T-12h",
+          "T-6h",
+          "T-3h"
+        ],
+        "alertLevels": [
+          "なし",
+          "注意報",
+          "警報",
+          "特別警報"
+        ],
+        "conditions": {
+          "requireItems": [],
+          "requireFlags": [],
+          "excludeEvacStatus": []
+        }
+      },
+      "weight": 2,
+      "rarity": "common",
+      "scoreDelta": {
+        "生存度": 2,
+        "判断力": 2,
+        "貢献度": 2,
+        "準備度": 0,
+        "文化度": 0
+      },
+      "effects": {
+        "setFlags": [],
+        "addItems": [],
+        "customEffect": null
+      },
+      "feedback": "助けが必要な人がいることを救助隊に連絡しました。",
+      "stamina": 0
+    },
+    {
+      "id": "evac_car_turn4_003",
+      "category": "避難行動系",
+      "text": "声をかけるが先を急ぐ",
+      "evacuationTurn": 4,
+      "transportMethod": "car",
+      "availableScenes": [
+        "evacuation"
+      ],
+      "availableWhen": {
+        "phases": [
+          "T-24h",
+          "T-12h",
+          "T-6h",
+          "T-3h"
+        ],
+        "alertLevels": [
+          "なし",
+          "注意報",
+          "警報",
+          "特別警報"
+        ],
+        "conditions": {
+          "requireItems": [],
+          "requireFlags": [],
+          "excludeEvacStatus": []
+        }
+      },
+      "weight": 2,
+      "rarity": "common",
+      "scoreDelta": {
+        "生存度": 1,
+        "判断力": 0,
+        "貢献度": 1,
+        "準備度": 0,
+        "文化度": 0
+      },
+      "effects": {
+        "setFlags": [],
+        "addItems": [],
+        "customEffect": null
+      },
+      "feedback": "声をかけましたが、家族の安全を優先して先を急ぎました。",
+      "stamina": -2
+    },
+    {
+      "id": "evac_car_turn4_004",
+      "category": "待機・時間調整系",
+      "text": "状況を見守る",
+      "evacuationTurn": 4,
+      "transportMethod": "car",
+      "availableScenes": [
+        "evacuation"
+      ],
+      "availableWhen": {
+        "phases": [
+          "T-24h",
+          "T-12h",
+          "T-6h",
+          "T-3h"
+        ],
+        "alertLevels": [
+          "なし",
+          "注意報",
+          "警報",
+          "特別警報"
+        ],
+        "conditions": {
+          "requireItems": [],
+          "requireFlags": [],
+          "excludeEvacStatus": []
+        }
+      },
+      "weight": 1.5,
+      "rarity": "common",
+      "scoreDelta": {
+        "生存度": 0,
+        "判断力": 1,
+        "貢献度": 0,
+        "準備度": 0,
+        "文化度": 0
+      },
+      "effects": {
+        "setFlags": [],
+        "addItems": [],
+        "customEffect": null
+      },
+      "feedback": "車内から状況を見守りました。",
+      "stamina": 2
+    },
+    {
+      "id": "evac_car_turn5_help",
+      "category": "コミュニケーション系",
+      "text": "駐車場の整理を手伝う",
+      "evacuationTurn": 5,
+      "transportMethod": "car",
+      "requiresHighStamina": true,
+      "availableScenes": [
+        "evacuation"
+      ],
+      "availableWhen": {
+        "phases": [
+          "T-24h",
+          "T-12h",
+          "T-6h",
+          "T-3h"
+        ],
+        "alertLevels": [
+          "なし",
+          "注意報",
+          "警報",
+          "特別警報"
+        ],
+        "conditions": {
+          "requireItems": [],
+          "requireFlags": [],
+          "excludeEvacStatus": []
+        }
+      },
+      "weight": 2,
+      "rarity": "common",
+      "scoreDelta": {
+        "生存度": 1,
+        "判断力": 1,
+        "貢献度": 3,
+        "準備度": 0,
+        "文化度": 1
+      },
+      "effects": {
+        "setFlags": [
+          "運営協力済み"
+        ],
+        "addItems": [],
+        "customEffect": null
+      },
+      "feedback": "避難所の駐車場整理を手伝い、多くの車が停められるようにしました。",
+      "stamina": -15
+    },
+    {
+      "id": "evac_car_turn5_greet",
+      "category": "コミュニケーション系",
+      "text": "他の避難者に挨拶する",
+      "evacuationTurn": 5,
+      "transportMethod": "car",
+      "requiresHighStamina": true,
+      "availableScenes": [
+        "evacuation"
+      ],
+      "availableWhen": {
+        "phases": [
+          "T-24h",
+          "T-12h",
+          "T-6h",
+          "T-3h"
+        ],
+        "alertLevels": [
+          "なし",
+          "注意報",
+          "警報",
+          "特別警報"
+        ],
+        "conditions": {
+          "requireItems": [],
+          "requireFlags": [],
+          "excludeEvacStatus": []
+        }
+      },
+      "weight": 2,
+      "rarity": "common",
+      "scoreDelta": {
+        "生存度": 0,
+        "判断力": 0,
+        "貢献度": 2,
+        "準備度": 0,
+        "文化度": 2
+      },
+      "effects": {
+        "setFlags": [],
+        "addItems": [],
+        "customEffect": null
+      },
+      "feedback": "車から降りて、他の避難者に挨拶しました。",
+      "stamina": -5
+    },
+    {
+      "id": "evac_car_turn5_rest",
+      "category": "待機・時間調整系",
+      "text": "車内で休む",
+      "evacuationTurn": 5,
+      "transportMethod": "car",
+      "requiresLowStamina": true,
+      "availableScenes": [
+        "evacuation"
+      ],
+      "availableWhen": {
+        "phases": [
+          "T-24h",
+          "T-12h",
+          "T-6h",
+          "T-3h"
+        ],
+        "alertLevels": [
+          "なし",
+          "注意報",
+          "警報",
+          "特別警報"
+        ],
+        "conditions": {
+          "requireItems": [],
+          "requireFlags": [],
+          "excludeEvacStatus": []
+        }
+      },
+      "weight": 1.5,
+      "rarity": "common",
+      "scoreDelta": {
+        "生存度": 1,
+        "判断力": 0,
+        "貢献度": 0,
+        "準備度": 0,
+        "文化度": 0
+      },
+      "effects": {
+        "setFlags": [],
+        "addItems": [],
+        "customEffect": null
+      },
+      "feedback": "疲れているので、車内でしばらく休むことにしました。",
+      "stamina": 15
+    },
+    {
+      "id": "evac_car_turn5_check",
+      "category": "情報系",
+      "text": "家族の状況を確認する",
+      "evacuationTurn": 5,
+      "transportMethod": "car",
+      "requiresLowStamina": true,
+      "availableScenes": [
+        "evacuation"
+      ],
+      "availableWhen": {
+        "phases": [
+          "T-24h",
+          "T-12h",
+          "T-6h",
+          "T-3h"
+        ],
+        "alertLevels": [
+          "なし",
+          "注意報",
+          "警報",
+          "特別警報"
+        ],
+        "conditions": {
+          "requireItems": [],
+          "requireFlags": [],
+          "excludeEvacStatus": []
+        }
+      },
+      "weight": 2,
+      "rarity": "common",
+      "scoreDelta": {
+        "生存度": 1,
+        "判断力": 1,
+        "貢献度": 1,
+        "準備度": 0,
+        "文化度": 0
+      },
+      "effects": {
+        "setFlags": [],
+        "addItems": [],
+        "customEffect": null
+      },
+      "feedback": "全員無事に避難所に到着したことを確認しました。",
+      "stamina": 0
     }
   ]
 }

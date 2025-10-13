@@ -127,34 +127,76 @@ function generateInitialScenario() {
   const floors = Math.random() < 0.6 ? 2 : Math.random() < 0.85 ? 1 : 3;
   const house = { floors, area: choice(areas) };
 
-  const timeOfDay = choice(['夕方', '夜', '夜', '深夜']); // 夜多め
+  const timeOfDay = choice(['夕方', '夜', '夜', '深夜']);
 
-  // 家族（所在付き）
+  const familyTypes = [
+    { type: 'single', weight: 0.20 },
+    { type: 'couple', weight: 0.20 },
+    { type: 'coupleWithChild', weight: 0.30 },
+    { type: 'singleParent', weight: 0.125 },
+    { type: 'threeGen', weight: 0.175 }
+  ];
+
+  const rand = Math.random();
+  let cumulative = 0;
+  let selectedType = 'single';
+  for (const ft of familyTypes) {
+    cumulative += ft.weight;
+    if (rand < cumulative) {
+      selectedType = ft.type;
+      break;
+    }
+  }
+
   const members = [{ name: 'あなた', role: 'player', location: 'home' }];
-  if (Math.random() < 0.55)
+  
+  if (selectedType === 'single') {
+  } else if (selectedType === 'couple') {
     members.push({
       name: '配偶者',
       role: 'spouse',
       location: Math.random() < 0.8 ? 'home' : 'away',
     });
-  if (Math.random() < 0.6)
+  } else if (selectedType === 'coupleWithChild') {
+    members.push({
+      name: '配偶者',
+      role: 'spouse',
+      location: Math.random() < 0.8 ? 'home' : 'away',
+    });
     members.push({ name: '小学生の子ども', role: 'child', location: 'home' });
-  if (Math.random() < 0.4)
+    if (Math.random() < 0.4) {
+      members.push({ name: '幼児', role: 'infant', location: 'home' });
+    }
+  } else if (selectedType === 'singleParent') {
+    members.push({ name: '小学生の子ども', role: 'child', location: 'home' });
+    if (Math.random() < 0.3) {
+      members.push({ name: '幼児', role: 'infant', location: 'home' });
+    }
+  } else if (selectedType === 'threeGen') {
+    members.push({
+      name: '配偶者',
+      role: 'spouse',
+      location: Math.random() < 0.8 ? 'home' : 'away',
+    });
+    members.push({ name: '小学生の子ども', role: 'child', location: 'home' });
     members.push({
       name: choice(['要介護の母', '自立の祖父']),
       role: 'elder',
       location: 'home',
     });
-  if (Math.random() < 0.3)
-    members.push({ name: choice(['小型犬', '猫']), role: 'pet', location: 'home' });
+  }
 
+  if (Math.random() < 0.3) {
+    members.push({ name: choice(['小型犬', '猫']), role: 'pet', location: 'home' });
+  }
 
   const hasElderly = members.some(m => m.role === 'elder');
+  const hasInfant = members.some(m => m.role === 'infant');
   const carAvailable = Math.random() < 0.6;
 
   const shelter = choice(['第一小学校 体育館', '市民センター', '地区防災広場']);
 
-  return { house, timeOfDay, family: members, shelter, hasElderly, carAvailable };
+  return { house, timeOfDay, family: members, shelter, hasElderly, hasInfant, carAvailable };
 }
 
 // ---------- 状態補正 ----------
@@ -961,8 +1003,11 @@ function selectChoicesByTurn(availableChoices, turnInPhase, state) {
     const currentTurn = getCurrentEvacuationTurn(state);
     if (!currentTurn) return [];
     
+    const transportMethod = (state.flags || []).includes('車使用') ? 'car' : 'foot';
+    
     const turnChoices = availableChoices.filter(c => 
-      c.evacuationTurn === currentTurn.id
+      c.evacuationTurn === currentTurn.id &&
+      (!c.transportMethod || c.transportMethod === transportMethod)
     );
     
     if (currentTurn.id === 5 && currentTurn.requiresStaminaCheck) {
@@ -1048,14 +1093,7 @@ function selectChoicesByTurn(availableChoices, turnInPhase, state) {
   }
   
   if (state.awaitingEvacuationMethod) {
-    return [
-      {
-        id: 'evacuate_by_car',
-        text: '車で避難する',
-        category: '避難行動系',
-        stamina: -20,
-        scoreDelta: { 生存度: 2, 判断力: -1, 貢献度: 0, 準備度: 0, 文化度: 0 }
-      },
+    const choices = [
       {
         id: 'evacuate_on_foot',
         text: '徒歩で避難する',
@@ -1064,6 +1102,19 @@ function selectChoicesByTurn(availableChoices, turnInPhase, state) {
         scoreDelta: { 生存度: 4, 判断力: 3, 貢献度: 0, 準備度: 0, 文化度: 0 }
       }
     ];
+    
+    if (state.scenario?.carAvailable) {
+      const hasVulnerable = state.scenario?.hasElderly || state.scenario?.hasInfant;
+      choices.unshift({
+        id: 'evacuate_by_car',
+        text: hasVulnerable ? '車で避難する（高齢者・乳幼児がいるため）' : '車で避難する（注意：冠水・事故のリスクあり）',
+        category: '避難行動系',
+        stamina: -20,
+        scoreDelta: { 生存度: hasVulnerable ? 3 : 1, 判断力: hasVulnerable ? 2 : -1, 貢献度: 0, 準備度: 0, 文化度: 0 }
+      });
+    }
+    
+    return choices;
   }
   
   if (state.currentScene === 'home' && state.phaseAlertLevel && state.phaseAlertLevel !== 'なし' && !state.awaitingEvacuationMethod) {
