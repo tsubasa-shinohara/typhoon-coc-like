@@ -103,6 +103,15 @@ function applySafetyRules(prev = {}, proposed = {}) {
   if (!s.phaseData) s.phaseData = {};
   if (!s.flags) s.flags = [];
   
+  if (!s.currentScene) s.currentScene = 'home';
+  if (!s.evacuationTurnsElapsed) s.evacuationTurnsElapsed = 0;
+  if (!s.evacuationStartPhase) s.evacuationStartPhase = null;
+  if (!s.awaitingEvacuationMethod) s.awaitingEvacuationMethod = false;
+  
+  if (typeof s.currentStamina !== 'number') s.currentStamina = 100;
+  if (!s.maxStamina) s.maxStamina = 100;
+  if (!s.staminaPenaltyActive) s.staminaPenaltyActive = false;
+  
   // Turn increment moved to endpoint handler to only increment when a choice is selected
   s.turn = s.totalTurns; // 互換性のため
   
@@ -220,6 +229,7 @@ function applySafetyRules(prev = {}, proposed = {}) {
   // lastAction を最初に宣言（全体で使用）
   // ------------------------------------------------------------
   const lastAction = prev._lastAction || '';
+  const lastChoiceId = prev._lastChoiceId || '';
 
   // ------------------------------------------------------------
   // ------------------------------------------------------------
@@ -292,61 +302,81 @@ function applySafetyRules(prev = {}, proposed = {}) {
 
   // ------------------------------------------------------------
   // ------------------------------------------------------------
-  const evacuationKeywords = ['避難所', '避難', '移動', '向かう', '出発', '出る', '目指す'];
-  const preparationKeywords = ['準備', '用意', 'チェック'];
-  const hasEvacuationKeyword = evacuationKeywords.some(k => lastAction.includes(k)) && !hasFloorKeyword;
-  const hasPreparationKeyword = preparationKeywords.some(k => lastAction.includes(k));
-  const isEvacuating = hasEvacuationKeyword && !hasPreparationKeyword;
-  
-  if (isEvacuating && (s.evac.status === 'none' || s.evac.status === 'aborted')) {
-    s.evac.status = 'en_route';
-  }
-
-  // 避難を開始したターン：在宅→避難中へ
-  if ((prev.evac?.status || 'none') !== 'en_route' && s.evac.status === 'en_route') {
-    s.evac.evacuationStartTurn = s.turn;
-    s.evac.turnsElapsed = 0;
-    s.evac.turnsRequired = 2;
-
-    const neighborKeywords = ['声をかけ', '呼びかけ', '周囲', '近所', '周りに', '隣人'];
-    const calledOutToNeighbors = neighborKeywords.some(k => lastAction.includes(k));
-    if (calledOutToNeighbors) {
-      s._neighborCalloutBonus = { compassion: 2, safety: 1 };
+  if (lastChoiceId === 'meta_evacuate') {
+    s.awaitingEvacuationMethod = true;
+  } else if (lastChoiceId === 'evacuate_by_car' || lastChoiceId === 'evacuate_on_foot') {
+    s.currentScene = 'evacuation';
+    s.evacuationStartPhase = s.currentPhase;
+    s.evacuationTurnsElapsed = 0;
+    s.awaitingEvacuationMethod = false;
+    
+    if (lastChoiceId === 'evacuate_by_car') {
+      s.flags.push('車使用');
+      s.carUse = true;
+    } else {
+      s.flags.push('徒歩避難');
     }
-
+    
+    s.evac.status = 'en_route';
+    s.evac.evacuationStartTurn = s.turn;
+    if (!s.evac.journeyLog) s.evac.journeyLog = [];
+    s.evac.journeyLog.push({
+      turn: s.turn,
+      text: `避難を開始しました（${lastChoiceId === 'evacuate_by_car' ? '車' : '徒歩'}）`,
+    });
+    
     s.familyLocations = (s.familyLocations || []).map(x => ({
       ...x,
       location: x.location === 'home' ? 'en_route' : x.location,
     }));
   }
-
-  if (s.evac.status === 'en_route') {
-    s.evac.turnsElapsed = s.turn - s.evac.evacuationStartTurn;
-
-    const hasKittenKeyword = (lastAction.includes('子猫') || lastAction.includes('猫')) &&
-      (lastAction.includes('助ける') || lastAction.includes('救う') || lastAction.includes('保護'));
+  
+  if (s.currentScene === 'evacuation' && s.evac?.status === 'en_route') {
+    s.evacuationTurnsElapsed = (s.evacuationTurnsElapsed || 0) + 1;
+    
+    let requiredTurns = 5;
+    
+    if (s.neighborOutreach || s.flags?.includes('近隣声掛け済み')) {
+      requiredTurns = Math.max(1, requiredTurns - 1);
+    }
+    if (s.routeConfirmed || s.flags?.includes('避難経路確認済み')) {
+      requiredTurns = Math.max(1, requiredTurns - 1);
+    }
+    if (s.evac.hasKittenEvent) {
+      requiredTurns += 1;
+    }
+    if (s.evac.hasFloodEvent) {
+      requiredTurns += 1;
+    }
+    
+    s.evacuationRequiredTurns = requiredTurns;
+    
+    if (s.evacuationTurnsElapsed >= requiredTurns) {
+      s.currentScene = 'shelter';
+      s.evac.status = 'arrived';
+      s.familyLocations = (s.familyLocations || []).map(x => ({
+        ...x,
+        location: (x.location === 'home' || x.location === 'en_route') ? 'arrived' : x.location,
+      }));
+      if (!s.evac.journeyLog) s.evac.journeyLog = [];
+      s.evac.journeyLog.push({
+        turn: s.turn,
+        text: '避難所に到着しました。',
+      });
+    } else {
+      if (!s.evac.journeyLog) s.evac.journeyLog = [];
+      s.evac.journeyLog.push({
+        turn: s.turn,
+        text: `避難中... (${s.evacuationTurnsElapsed}/${requiredTurns})`,
+      });
+    }
+    
+    const hasKittenKeyword = ['子猫', 'ネコ', '猫'].some(k => lastAction.includes(k));
     if (hasKittenKeyword && !s.evac.hasKittenEvent) {
       s.evac.hasKittenEvent = true;
-      s.evac.turnsRequired += 1;
-      s.evac.journeyLog.push({ turn: s.turn, text: '子猫を助けたため、避難に1ターン余分にかかります。' });
+      if (!s.evac.hazards) s.evac.hazards = [];
+      s.evac.hazards.push('子猫救出');
     }
-
-    if (!s.evac.hasFloodEvent && Math.random() < 0.25) {
-      s.evac.hasFloodEvent = true;
-      s.evac.turnsRequired += 1;
-      s.evac.journeyLog.push({ turn: s.turn, text: '経路が冠水しており、迂回が必要です。避難に1ターン余分にかかります。' });
-    }
-  }
-
-  if (s.evac.status === 'en_route' && s.evac.turnsElapsed >= s.evac.turnsRequired) {
-    s.evac.status = 'arrived';
-    s.familyLocations = (s.familyLocations || []).map(x => ({
-      ...x,
-      location: (x.location === 'home' || x.location === 'en_route' || x.location === 'away')
-        ? 'arrived'
-        : x.location,
-    }));
-    s.evac.journeyLog.push({ turn: s.turn, text: '避難所に到着しました。' });
   }
 
   // ------------------------------------------------------------
@@ -704,14 +734,49 @@ function selectAlertLevel(prevLevel, options) {
   return validOptions[0];
 }
 
+function getStaminaMultiplier(alertLevel, isRecovery) {
+  const multipliers = {
+    'なし': { decrease: 1.0, recovery: 1.0 },
+    '注意報': { decrease: 1.1, recovery: 0.9 },
+    '警報': { decrease: 1.3, recovery: 0.7 },
+    '特別警報': { decrease: 1.5, recovery: 0.5 }
+  };
+  
+  const level = multipliers[alertLevel] || multipliers['なし'];
+  return isRecovery ? level.recovery : level.decrease;
+}
+
+function calculateStaminaCost(choice, alertLevel) {
+  if (!choice.stamina) return 0;
+  
+  const isRecovery = choice.stamina > 0;
+  const multiplier = getStaminaMultiplier(alertLevel, isRecovery);
+  
+  return Math.round(choice.stamina * multiplier);
+}
+
 function filterAvailableChoices(state) {
   const currentPhase = PHASES[state.currentPhase];
   const phaseId = currentPhase?.id || "T-24h";
   const alertLevel = state.phaseAlertLevel || "なし";
+  const currentScene = state.currentScene || 'home';
   
   return CHOICES_DATA.choices.filter(choice => {
     if (!choice.availableWhen.phases.includes(phaseId)) return false;
     if (!choice.availableWhen.alertLevels.includes(alertLevel)) return false;
+    
+    if (choice.availableScenes && !choice.availableScenes.includes(currentScene)) {
+      return false;
+    }
+    
+    if (choice.stamina) {
+      const cost = calculateStaminaCost(choice, alertLevel);
+      const finalStamina = state.currentStamina - cost;
+      
+      if (cost < 0 && finalStamina < 0) {
+        return false;
+      }
+    }
     
     if (choice.availableWhen.conditions.requireItems) {
       const hasRequiredItems = choice.availableWhen.conditions.requireItems.every(
@@ -770,17 +835,53 @@ function selectChoicesByTurn(availableChoices, turnInPhase, state) {
     !state.selectedChoiceIds || !state.selectedChoiceIds.includes(c.id)
   );
   
-  if (unselectedChoices.length === 0) {
+  const selected = [];
+  const usedCategories = new Set();
+  
+  const hasWarnings = 
+    (state.jma?.advisories?.length > 0) ||
+    (state.jma?.warnings?.length > 0) ||
+    (state.jma?.special?.length > 0) ||
+    (state.evacuationInfo && state.evacuationInfo !== 'なし');
+  
+  if (state.awaitingEvacuationMethod) {
     return [
-      { id: 'fallback_1', text: '現状を確認する', category: '情報系' },
-      { id: 'fallback_2', text: '家族と話し合う', category: 'コミュニケーション系' },
-      { id: 'fallback_3', text: '様子を見る', category: '待機・時間調整系' },
-      { id: 'fallback_4', text: '情報を収集する', category: '情報系' }
+      {
+        id: 'evacuate_by_car',
+        text: '車で避難する',
+        category: '避難行動系',
+        stamina: -20,
+        scoreDelta: { 生存度: 2, 判断力: -1, 貢献度: 0, 準備度: 0, 文化度: 0 }
+      },
+      {
+        id: 'evacuate_on_foot',
+        text: '徒歩で避難する',
+        category: '避難行動系',
+        stamina: -25,
+        scoreDelta: { 生存度: 4, 判断力: 3, 貢献度: 0, 準備度: 0, 文化度: 0 }
+      }
     ];
   }
   
-  const selected = [];
-  const usedCategories = new Set();
+  if (state.currentScene === 'home' && hasWarnings && !state.awaitingEvacuationMethod) {
+    selected.push({
+      id: 'meta_evacuate',
+      text: '避難する',
+      category: '避難行動系',
+      stamina: -15,
+      isMeta: true,
+      scoreDelta: { 生存度: 0, 判断力: 0, 貢献度: 0, 準備度: 0, 文化度: 0 }
+    });
+  }
+  
+  if (unselectedChoices.length === 0 && selected.length === 0) {
+    return [
+      { id: 'fallback_1', text: '現状を確認する', category: '情報系', stamina: -5 },
+      { id: 'fallback_2', text: '家族と話し合う', category: 'コミュニケーション系', stamina: -3 },
+      { id: 'fallback_3', text: '様子を見る', category: '待機・時間調整系', stamina: 5 },
+      { id: 'fallback_4', text: '情報を収集する', category: '情報系', stamina: -5 }
+    ];
+  }
   
   const triggeredChoices = unselectedChoices.filter(choice => {
     const requiredFlags = choice.availableWhen?.conditions?.requireFlags || [];
@@ -1018,47 +1119,119 @@ app.post('/api/facilitator', async (req, res) => {
       selectedChoice = CHOICES_DATA.choices.find(c => c.id === selectedChoiceId);
       
       if (!selectedChoice) {
-        return res.status(400).json({ error: '選択肢が見つかりません' });
+        if (selectedChoiceId === 'meta_evacuate') {
+          selectedChoice = {
+            id: 'meta_evacuate',
+            text: '避難する',
+            category: '避難行動系',
+            stamina: -15,
+            isMeta: true,
+            feedback: '避難することを決めました。'
+          };
+        } else if (selectedChoiceId === 'evacuate_by_car') {
+          selectedChoice = {
+            id: 'evacuate_by_car',
+            text: '車で避難する',
+            category: '避難行動系',
+            stamina: -20,
+            feedback: '車で避難所に向かうことにしました。'
+          };
+        } else if (selectedChoiceId === 'evacuate_on_foot') {
+          selectedChoice = {
+            id: 'evacuate_on_foot',
+            text: '徒歩で避難する',
+            category: '避難行動系',
+            stamina: -25,
+            feedback: '徒歩で避難所に向かうことにしました。'
+          };
+        } else if (selectedChoiceId && selectedChoiceId.startsWith('fallback_')) {
+          selectedChoice = {
+            id: selectedChoiceId,
+            text: state._lastAction || 'アクションを実行',
+            category: '情報系',
+            stamina: -5,
+            feedback: 'アクションを実行しました。'
+          };
+        } else {
+          console.error('[ERROR] Choice not found:', selectedChoiceId);
+          return res.status(400).json({ error: '選択肢が見つかりません' });
+        }
       }
       
       if (selectedChoice) {
         updates.scoreDelta = selectedChoice.scoreDelta;
         
-        if (selectedChoice.effects.setFlags && selectedChoice.effects.setFlags.length > 0) {
+        if (selectedChoice.effects?.setFlags && selectedChoice.effects.setFlags.length > 0) {
           updates.flags = [...(state.flags || []), ...selectedChoice.effects.setFlags];
         }
         
-        if (selectedChoice.effects.addItems && selectedChoice.effects.addItems.length > 0) {
+        if (selectedChoice.effects?.addItems && selectedChoice.effects.addItems.length > 0) {
           updates.items = [...(state.items || []), ...selectedChoice.effects.addItems];
         }
         
-        if (selectedChoice.effects.customEffect) {
+        if (selectedChoice.effects?.customEffect) {
           const customUpdates = handleCustomEffect(selectedChoice.effects.customEffect, state);
           updates = { ...updates, ...customUpdates };
         }
       }
     }
 
-    let next = applySafetyRules(state || {}, updates);
+    const stateWithAction = { 
+      ...(state || {}), 
+      _lastAction: selectedChoice?.text || '', 
+      _lastChoiceId: selectedChoiceId 
+    };
+    let next = applySafetyRules(stateWithAction, updates);
 
-    // Only increment turns when a choice was actually selected
     if (selectedChoiceId) {
       next.totalTurns = (next.totalTurns || 0) + 1;
-      next.turnInPhase = (next.turnInPhase || 0) + 1;
-      next.turn = next.totalTurns;
       
-      // Check if we need to advance to next phase
-      if (next.turnInPhase > PHASES[next.currentPhase].turnsInPhase) {
-        next.currentPhase++;
-        next.turnInPhase = 1;
-        next.phaseData.turn1Categories = [];
+      if (selectedChoice && selectedChoice.stamina) {
+        console.log('[STAMINA DEBUG] Choice:', selectedChoiceId, 'Base stamina:', selectedChoice.stamina, 'Alert level:', next.phaseAlertLevel);
+        const cost = calculateStaminaCost(selectedChoice, next.phaseAlertLevel);
+        console.log('[STAMINA DEBUG] Calculated cost:', cost, 'Current stamina:', next.currentStamina, 'Max stamina:', next.maxStamina);
+        next.currentStamina = Math.max(0, Math.min(next.maxStamina, next.currentStamina + cost));
+        console.log('[STAMINA DEBUG] New stamina:', next.currentStamina);
         
-        if (next.familyLocations) {
-          next.familyLocations = next.familyLocations.map(x => {
-            if (x.location === 'unknown') return { ...x, location: 'home' };
-            return x;
-          });
+        if (next.currentStamina === 0 && !next.staminaPenaltyActive) {
+          next.staminaPenaltyActive = true;
+          next.currentPhase++;
+          next.currentStamina = 30;
+          next.turnInPhase = 0;
+          next.phaseData.turn1Categories = [];
         }
+      }
+      
+      if (next.currentScene === 'evacuation') {
+        next.evacuationTurnsElapsed = (next.evacuationTurnsElapsed || 0) + 1;
+      } else if (next.currentScene === 'shelter') {
+        if (next.turnInPhase >= 1) {
+          next.currentPhase++;
+          next.turnInPhase = 1;
+          next.phaseData.turn1Categories = [];
+        } else {
+          next.turnInPhase++;
+        }
+      } else {
+        next.turnInPhase = (next.turnInPhase || 0) + 1;
+        next.turn = next.totalTurns;
+        
+        if (next.turnInPhase > PHASES[next.currentPhase].turnsInPhase) {
+          next.currentPhase++;
+          next.turnInPhase = 1;
+          next.phaseData.turn1Categories = [];
+          
+          if (next.familyLocations) {
+            next.familyLocations = next.familyLocations.map(x => {
+              if (x.location === 'unknown') return { ...x, location: 'home' };
+              return x;
+            });
+          }
+        }
+      }
+      
+      if (next.staminaPenaltyActive) {
+        next.staminaPenaltyActive = false;
       }
     }
 
@@ -1170,7 +1343,12 @@ JSON形式で返してください:
 
     res.json({ 
       narration: safeNarr, 
-      choices: choices.map(c => ({ id: c.id, text: c.text, category: c.category })), 
+      choices: choices.map(c => ({ 
+        id: c.id, 
+        text: c.text, 
+        category: c.category, 
+        stamina: c.stamina || 0 
+      })), 
       state: next,
       phaseInfo,
       finalReport

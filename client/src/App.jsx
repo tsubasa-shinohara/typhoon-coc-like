@@ -57,6 +57,23 @@ const AlertBanner = ({ kind, text }) => {
     );
 };
 
+function calculateStaminaCostOnClient(baseStamina, alertLevel) {
+    if (!baseStamina) return 0;
+    
+    const isRecovery = baseStamina > 0;
+    const multipliers = {
+        'なし': { decrease: 1.0, recovery: 1.0 },
+        '注意報': { decrease: 1.1, recovery: 0.9 },
+        '警報': { decrease: 1.3, recovery: 0.7 },
+        '特別警報': { decrease: 1.5, recovery: 0.5 }
+    };
+    
+    const level = multipliers[alertLevel] || multipliers['なし'];
+    const multiplier = isRecovery ? level.recovery : level.decrease;
+    
+    return Math.round(baseStamina * multiplier);
+}
+
 export default function App() {
     // ① サーバからランダム設定を取得
     const [scenario, setScenario] = useState(null);
@@ -85,6 +102,11 @@ export default function App() {
         turnInPhase: 1,
         totalTurns: 0,
         phaseAlertLevel: 'なし',
+        currentScene: 'home',
+        currentStamina: 100,
+        maxStamina: 100,
+        evacuationTurnsElapsed: 0,
+        awaitingEvacuationMethod: false,
         powerOutage: false,
         mobileSignal: '通話可',
         floodLevel: 'none',
@@ -129,6 +151,11 @@ export default function App() {
             turnInPhase: 1,
             totalTurns: 0,
             phaseAlertLevel: 'なし',
+            currentScene: 'home',
+            currentStamina: 100,
+            maxStamina: 100,
+            evacuationTurnsElapsed: 0,
+            awaitingEvacuationMethod: false,
             powerOutage: false,
             mobileSignal: '通話可',
             floodLevel: 'none',
@@ -310,8 +337,8 @@ export default function App() {
     const evacLabel = (() => {
         const st = state.evac?.status || 'none';
         if (st === 'en_route') {
-            const turnsElapsed = state.evac?.turnsElapsed || 0;
-            const turnsRequired = state.evac?.turnsRequired || 2;
+            const turnsElapsed = state.evacuationTurnsElapsed || 0;
+            const turnsRequired = state.evacuationRequiredTurns || 5;
             return `避難中：あと${Math.max(0, turnsRequired - turnsElapsed)}ターン`;
         }
         if (st === 'arrived') return '避難所に到着';
@@ -371,6 +398,31 @@ export default function App() {
     const slideColor = { none: 'blue', low: 'yellow', medium: 'orange', high: 'red' }[state.landslide?.risk || 'none'];
     const slideBadge = <Badge color={slideColor}>土砂: {state.landslide?.info || 'なし'}</Badge>;
 
+    const sceneLabel = {
+        home: '自宅',
+        evacuation: '避難中',
+        shelter: '避難所'
+    }[state.currentScene] || '—';
+    const sceneBadge = (
+        <Badge color={
+            state.currentScene === 'home' ? 'blue' :
+            state.currentScene === 'evacuation' ? 'orange' :
+            'green'
+        }>
+            シーン: {sceneLabel}
+        </Badge>
+    );
+
+    const staminaColor = 
+        state.currentStamina >= 70 ? 'green' :
+        state.currentStamina >= 40 ? 'yellow' :
+        state.currentStamina >= 20 ? 'orange' : 'red';
+    const staminaBadge = (
+        <Badge color={staminaColor}>
+            体力: {state.currentStamina}/{state.maxStamina}
+        </Badge>
+    );
+
     // ⑥ 結果画面
     if (state.phase === 'ended' && state.finalReport) {
         const r = state.finalReport;
@@ -379,6 +431,8 @@ export default function App() {
                 <h1>Typhoon Facilitator（結果）</h1>
 
                 <div style={{ marginBottom: 8 }}>
+                    {sceneBadge}
+                    {staminaBadge}
                     {powerBadge}
                     {signalBadge}
                     {floodBadge}
@@ -465,6 +519,8 @@ export default function App() {
             {/* ステータス行 */}
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 10 }}>
                 {phaseInfo && <Badge color="blue">{phaseInfo.phaseName}（{phaseInfo.turnInPhase}/3ターン）</Badge>}
+                {sceneBadge}
+                {staminaBadge}
                 {powerBadge}
                 {signalBadge}
                 {floodBadge}
@@ -562,38 +618,51 @@ export default function App() {
                         行動を選択してください:
                     </div>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                        {state._choices.map((c, i) => (
-                            <button
-                                key={c.id || i}
-                                onClick={() => send(c)}
-                                style={{ 
-                                    padding: '12px 16px', 
-                                    borderRadius: 8, 
-                                    border: '2px solid #4A90E2', 
-                                    background: '#fff',
-                                    textAlign: 'left',
-                                    cursor: 'pointer',
-                                    transition: 'all 0.2s',
-                                    fontSize: 14
-                                }}
-                                onMouseEnter={(e) => {
-                                    e.target.style.background = '#E3F2FD';
-                                    e.target.style.borderColor = '#1976D2';
-                                }}
-                                onMouseLeave={(e) => {
-                                    e.target.style.background = '#fff';
-                                    e.target.style.borderColor = '#4A90E2';
-                                }}
-                                title={c.category ? `カテゴリー: ${c.category}` : ''}
-                            >
-                                <strong>{c.text}</strong>
-                                {c.category && (
-                                    <span style={{ fontSize: 11, color: '#777', marginLeft: 8 }}>
-                                        ({c.category})
-                                    </span>
-                                )}
-                            </button>
-                        ))}
+                        {state._choices.map((c, i) => {
+                            const staminaCost = c.stamina ? calculateStaminaCostOnClient(c.stamina, state.phaseAlertLevel) : 0;
+                            return (
+                                <button
+                                    key={c.id || i}
+                                    onClick={() => send(c)}
+                                    style={{ 
+                                        padding: '12px 16px', 
+                                        borderRadius: 8, 
+                                        border: '2px solid #4A90E2', 
+                                        background: '#fff',
+                                        textAlign: 'left',
+                                        cursor: 'pointer',
+                                        transition: 'all 0.2s',
+                                        fontSize: 14
+                                    }}
+                                    onMouseEnter={(e) => {
+                                        e.target.style.background = '#E3F2FD';
+                                        e.target.style.borderColor = '#1976D2';
+                                    }}
+                                    onMouseLeave={(e) => {
+                                        e.target.style.background = '#fff';
+                                        e.target.style.borderColor = '#4A90E2';
+                                    }}
+                                    title={c.category ? `カテゴリー: ${c.category}` : ''}
+                                >
+                                    <strong>{c.text}</strong>
+                                    {c.category && (
+                                        <span style={{ fontSize: 11, color: '#777', marginLeft: 8 }}>
+                                            ({c.category})
+                                        </span>
+                                    )}
+                                    {staminaCost !== 0 && (
+                                        <span style={{ 
+                                            fontSize: 11, 
+                                            color: staminaCost > 0 ? '#2e7d32' : '#d32f2f', 
+                                            marginLeft: 8,
+                                            fontWeight: 'bold'
+                                        }}>
+                                            体力: {staminaCost > 0 ? '+' : ''}{staminaCost}
+                                        </span>
+                                    )}
+                                </button>
+                            );
+                        })}
                     </div>
                 </div>
             )}
