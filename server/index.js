@@ -855,8 +855,13 @@ function selectAlertLevel(prevLevel, options) {
   
   const weights = validOptions.map(opt => {
     const rank = levelRank[opt] || 0;
-    if (rank === prevRank) return 0.5;
-    if (rank > prevRank) return 0.3;
+    
+    if (prevRank === 0 && rank > prevRank) {
+      return 0.7;
+    }
+    
+    if (rank === prevRank) return 0.3;
+    if (rank > prevRank) return 0.5;
     return 0.2;
   });
   
