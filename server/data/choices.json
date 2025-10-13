@@ -2685,6 +2685,1162 @@
       },
       "feedback": "避難所のテレビで最新の気象情報を確認しました。",
       "stamina": 0
+    },
+    {
+      "id": "evac_turn1_001",
+      "category": "避難行動系",
+      "text": "持ち物を最終確認する",
+      "evacuationTurn": 1,
+      "availableScenes": [
+        "evacuation"
+      ],
+      "availableWhen": {
+        "phases": [
+          "T-24h",
+          "T-12h",
+          "T-6h",
+          "T-3h"
+        ],
+        "alertLevels": [
+          "なし",
+          "注意報",
+          "警報",
+          "特別警報"
+        ],
+        "conditions": {
+          "requireItems": [],
+          "requireFlags": [],
+          "excludeEvacStatus": []
+        }
+      },
+      "weight": 2,
+      "rarity": "common",
+      "scoreDelta": {
+        "生存度": 1,
+        "判断力": 1,
+        "貢献度": 0,
+        "準備度": 1,
+        "文化度": 0
+      },
+      "effects": {
+        "setFlags": [],
+        "addItems": [],
+        "customEffect": null
+      },
+      "feedback": "持ち物を最終確認しました。忘れ物はありません。",
+      "stamina": -5
+    },
+    {
+      "id": "evac_turn1_002",
+      "category": "コミュニケーション系",
+      "text": "家族に声をかける",
+      "evacuationTurn": 1,
+      "availableScenes": [
+        "evacuation"
+      ],
+      "availableWhen": {
+        "phases": [
+          "T-24h",
+          "T-12h",
+          "T-6h",
+          "T-3h"
+        ],
+        "alertLevels": [
+          "なし",
+          "注意報",
+          "警報",
+          "特別警報"
+        ],
+        "conditions": {
+          "requireItems": [],
+          "requireFlags": [],
+          "excludeEvacStatus": []
+        }
+      },
+      "weight": 2,
+      "rarity": "common",
+      "scoreDelta": {
+        "生存度": 0,
+        "判断力": 0,
+        "貢献度": 2,
+        "準備度": 0,
+        "文化度": 1
+      },
+      "effects": {
+        "setFlags": [],
+        "addItems": [],
+        "customEffect": null
+      },
+      "feedback": "家族全員の準備ができたことを確認し、励まし合いました。",
+      "stamina": 0
+    },
+    {
+      "id": "evac_turn1_003",
+      "category": "情報系",
+      "text": "外の状況を確認する",
+      "evacuationTurn": 1,
+      "availableScenes": [
+        "evacuation"
+      ],
+      "availableWhen": {
+        "phases": [
+          "T-24h",
+          "T-12h",
+          "T-6h",
+          "T-3h"
+        ],
+        "alertLevels": [
+          "なし",
+          "注意報",
+          "警報",
+          "特別警報"
+        ],
+        "conditions": {
+          "requireItems": [],
+          "requireFlags": [],
+          "excludeEvacStatus": []
+        }
+      },
+      "weight": 2,
+      "rarity": "common",
+      "scoreDelta": {
+        "生存度": 1,
+        "判断力": 2,
+        "貢献度": 0,
+        "準備度": 0,
+        "文化度": 0
+      },
+      "effects": {
+        "setFlags": [],
+        "addItems": [],
+        "customEffect": null
+      },
+      "feedback": "窓から外の状況を確認しました。今のうちに出発しましょう。",
+      "stamina": 0
+    },
+    {
+      "id": "evac_turn1_004",
+      "category": "待機・時間調整系",
+      "text": "深呼吸して落ち着く",
+      "evacuationTurn": 1,
+      "availableScenes": [
+        "evacuation"
+      ],
+      "availableWhen": {
+        "phases": [
+          "T-24h",
+          "T-12h",
+          "T-6h",
+          "T-3h"
+        ],
+        "alertLevels": [
+          "なし",
+          "注意報",
+          "警報",
+          "特別警報"
+        ],
+        "conditions": {
+          "requireItems": [],
+          "requireFlags": [],
+          "excludeEvacStatus": []
+        }
+      },
+      "weight": 1.5,
+      "rarity": "common",
+      "scoreDelta": {
+        "生存度": 0,
+        "判断力": 1,
+        "貢献度": 0,
+        "準備度": 0,
+        "文化度": 0
+      },
+      "effects": {
+        "setFlags": [],
+        "addItems": [],
+        "customEffect": null
+      },
+      "feedback": "深呼吸をして気持ちを落ち着けました。冷静に行動できそうです。",
+      "stamina": 5
+    },
+    {
+      "id": "evac_turn2_001",
+      "category": "避難行動系",
+      "text": "別ルートを探す",
+      "evacuationTurn": 2,
+      "availableScenes": [
+        "evacuation"
+      ],
+      "availableWhen": {
+        "phases": [
+          "T-24h",
+          "T-12h",
+          "T-6h",
+          "T-3h"
+        ],
+        "alertLevels": [
+          "なし",
+          "注意報",
+          "警報",
+          "特別警報"
+        ],
+        "conditions": {
+          "requireItems": [],
+          "requireFlags": [],
+          "excludeEvacStatus": []
+        }
+      },
+      "weight": 2,
+      "rarity": "common",
+      "scoreDelta": {
+        "生存度": 1,
+        "判断力": 2,
+        "貢献度": 0,
+        "準備度": 0,
+        "文化度": 0
+      },
+      "effects": {
+        "setFlags": [],
+        "addItems": [],
+        "customEffect": null
+      },
+      "feedback": "通常ルートが使えないため、別ルートを探して進みました。",
+      "stamina": -8
+    },
+    {
+      "id": "evac_turn2_002",
+      "category": "情報系",
+      "text": "周囲の人に道を尋ねる",
+      "evacuationTurn": 2,
+      "availableScenes": [
+        "evacuation"
+      ],
+      "availableWhen": {
+        "phases": [
+          "T-24h",
+          "T-12h",
+          "T-6h",
+          "T-3h"
+        ],
+        "alertLevels": [
+          "なし",
+          "注意報",
+          "警報",
+          "特別警報"
+        ],
+        "conditions": {
+          "requireItems": [],
+          "requireFlags": [],
+          "excludeEvacStatus": []
+        }
+      },
+      "weight": 2,
+      "rarity": "common",
+      "scoreDelta": {
+        "生存度": 0,
+        "判断力": 1,
+        "貢献度": 1,
+        "準備度": 0,
+        "文化度": 1
+      },
+      "effects": {
+        "setFlags": [],
+        "addItems": [],
+        "customEffect": null
+      },
+      "feedback": "周囲の人に道を尋ね、迂回路の情報を得ました。",
+      "stamina": -3
+    },
+    {
+      "id": "evac_turn2_003",
+      "category": "避難行動系",
+      "text": "慎重に迂回路を進む",
+      "evacuationTurn": 2,
+      "availableScenes": [
+        "evacuation"
+      ],
+      "availableWhen": {
+        "phases": [
+          "T-24h",
+          "T-12h",
+          "T-6h",
+          "T-3h"
+        ],
+        "alertLevels": [
+          "なし",
+          "注意報",
+          "警報",
+          "特別警報"
+        ],
+        "conditions": {
+          "requireItems": [],
+          "requireFlags": [],
+          "excludeEvacStatus": []
+        }
+      },
+      "weight": 2,
+      "rarity": "common",
+      "scoreDelta": {
+        "生存度": 2,
+        "判断力": 1,
+        "貢献度": 0,
+        "準備度": 0,
+        "文化度": 0
+      },
+      "effects": {
+        "setFlags": [],
+        "addItems": [],
+        "customEffect": null
+      },
+      "feedback": "慎重に迂回路を進み、無事に通過しました。",
+      "stamina": -6
+    },
+    {
+      "id": "evac_turn2_004",
+      "category": "待機・時間調整系",
+      "text": "少し休憩する",
+      "evacuationTurn": 2,
+      "availableScenes": [
+        "evacuation"
+      ],
+      "availableWhen": {
+        "phases": [
+          "T-24h",
+          "T-12h",
+          "T-6h",
+          "T-3h"
+        ],
+        "alertLevels": [
+          "なし",
+          "注意報",
+          "警報",
+          "特別警報"
+        ],
+        "conditions": {
+          "requireItems": [],
+          "requireFlags": [],
+          "excludeEvacStatus": []
+        }
+      },
+      "weight": 1.5,
+      "rarity": "common",
+      "scoreDelta": {
+        "生存度": 1,
+        "判断力": 0,
+        "貢献度": 0,
+        "準備度": 0,
+        "文化度": 0
+      },
+      "effects": {
+        "setFlags": [],
+        "addItems": [],
+        "customEffect": null
+      },
+      "feedback": "少し休憩を取り、体力を回復しました。",
+      "stamina": 8
+    },
+    {
+      "id": "evac_turn3_001",
+      "category": "避難行動系",
+      "text": "障害物を避けて進む",
+      "evacuationTurn": 3,
+      "availableScenes": [
+        "evacuation"
+      ],
+      "availableWhen": {
+        "phases": [
+          "T-24h",
+          "T-12h",
+          "T-6h",
+          "T-3h"
+        ],
+        "alertLevels": [
+          "なし",
+          "注意報",
+          "警報",
+          "特別警報"
+        ],
+        "conditions": {
+          "requireItems": [],
+          "requireFlags": [],
+          "excludeEvacStatus": []
+        }
+      },
+      "weight": 2,
+      "rarity": "common",
+      "scoreDelta": {
+        "生存度": 1,
+        "判断力": 1,
+        "貢献度": 0,
+        "準備度": 0,
+        "文化度": 0
+      },
+      "effects": {
+        "setFlags": [],
+        "addItems": [],
+        "customEffect": null
+      },
+      "feedback": "道に倒れた障害物を避けて進みました。",
+      "stamina": -7
+    },
+    {
+      "id": "evac_turn3_002",
+      "category": "コミュニケーション系",
+      "text": "周囲の人と協力して障害物を除去する",
+      "evacuationTurn": 3,
+      "availableScenes": [
+        "evacuation"
+      ],
+      "availableWhen": {
+        "phases": [
+          "T-24h",
+          "T-12h",
+          "T-6h",
+          "T-3h"
+        ],
+        "alertLevels": [
+          "なし",
+          "注意報",
+          "警報",
+          "特別警報"
+        ],
+        "conditions": {
+          "requireItems": [],
+          "requireFlags": [],
+          "excludeEvacStatus": []
+        }
+      },
+      "weight": 2,
+      "rarity": "common",
+      "scoreDelta": {
+        "生存度": 1,
+        "判断力": 0,
+        "貢献度": 3,
+        "準備度": 0,
+        "文化度": 1
+      },
+      "effects": {
+        "setFlags": [],
+        "addItems": [],
+        "customEffect": null
+      },
+      "feedback": "周囲の人と協力して障害物を除去し、道を確保しました。",
+      "stamina": -10
+    },
+    {
+      "id": "evac_turn3_003",
+      "category": "避難行動系",
+      "text": "別の道を探す",
+      "evacuationTurn": 3,
+      "availableScenes": [
+        "evacuation"
+      ],
+      "availableWhen": {
+        "phases": [
+          "T-24h",
+          "T-12h",
+          "T-6h",
+          "T-3h"
+        ],
+        "alertLevels": [
+          "なし",
+          "注意報",
+          "警報",
+          "特別警報"
+        ],
+        "conditions": {
+          "requireItems": [],
+          "requireFlags": [],
+          "excludeEvacStatus": []
+        }
+      },
+      "weight": 2,
+      "rarity": "common",
+      "scoreDelta": {
+        "生存度": 0,
+        "判断力": 2,
+        "貢献度": 0,
+        "準備度": 0,
+        "文化度": 0
+      },
+      "effects": {
+        "setFlags": [],
+        "addItems": [],
+        "customEffect": null
+      },
+      "feedback": "障害物を避け、別の道を見つけて進みました。",
+      "stamina": -8
+    },
+    {
+      "id": "evac_turn3_004",
+      "category": "待機・時間調整系",
+      "text": "一旦立ち止まり状況を確認する",
+      "evacuationTurn": 3,
+      "availableScenes": [
+        "evacuation"
+      ],
+      "availableWhen": {
+        "phases": [
+          "T-24h",
+          "T-12h",
+          "T-6h",
+          "T-3h"
+        ],
+        "alertLevels": [
+          "なし",
+          "注意報",
+          "警報",
+          "特別警報"
+        ],
+        "conditions": {
+          "requireItems": [],
+          "requireFlags": [],
+          "excludeEvacStatus": []
+        }
+      },
+      "weight": 1.5,
+      "rarity": "common",
+      "scoreDelta": {
+        "生存度": 1,
+        "判断力": 1,
+        "貢献度": 0,
+        "準備度": 0,
+        "文化度": 0
+      },
+      "effects": {
+        "setFlags": [],
+        "addItems": [],
+        "customEffect": null
+      },
+      "feedback": "一旦立ち止まり、周囲の状況を確認しました。",
+      "stamina": 0
+    },
+    {
+      "id": "evac_turn4_001",
+      "category": "コミュニケーション系",
+      "text": "助けを求める人を手伝う",
+      "evacuationTurn": 4,
+      "availableScenes": [
+        "evacuation"
+      ],
+      "availableWhen": {
+        "phases": [
+          "T-24h",
+          "T-12h",
+          "T-6h",
+          "T-3h"
+        ],
+        "alertLevels": [
+          "なし",
+          "注意報",
+          "警報",
+          "特別警報"
+        ],
+        "conditions": {
+          "requireItems": [],
+          "requireFlags": [],
+          "excludeEvacStatus": []
+        }
+      },
+      "weight": 2,
+      "rarity": "common",
+      "scoreDelta": {
+        "生存度": 0,
+        "判断力": 1,
+        "貢献度": 3,
+        "準備度": 0,
+        "文化度": 2
+      },
+      "effects": {
+        "setFlags": [],
+        "addItems": [],
+        "customEffect": null
+      },
+      "feedback": "助けを求める人を手伝い、一緒に避難しました。",
+      "stamina": -12
+    },
+    {
+      "id": "evac_turn4_002",
+      "category": "情報系",
+      "text": "救助隊に連絡する",
+      "evacuationTurn": 4,
+      "availableScenes": [
+        "evacuation"
+      ],
+      "availableWhen": {
+        "phases": [
+          "T-24h",
+          "T-12h",
+          "T-6h",
+          "T-3h"
+        ],
+        "alertLevels": [
+          "なし",
+          "注意報",
+          "警報",
+          "特別警報"
+        ],
+        "conditions": {
+          "requireItems": [],
+          "requireFlags": [],
+          "excludeEvacStatus": []
+        }
+      },
+      "weight": 2,
+      "rarity": "common",
+      "scoreDelta": {
+        "生存度": 1,
+        "判断力": 2,
+        "貢献度": 2,
+        "準備度": 0,
+        "文化度": 0
+      },
+      "effects": {
+        "setFlags": [],
+        "addItems": [],
+        "customEffect": null
+      },
+      "feedback": "救助隊に連絡し、助けが必要な人の場所を伝えました。",
+      "stamina": -3
+    },
+    {
+      "id": "evac_turn4_003",
+      "category": "避難行動系",
+      "text": "声をかけるが先を急ぐ",
+      "evacuationTurn": 4,
+      "availableScenes": [
+        "evacuation"
+      ],
+      "availableWhen": {
+        "phases": [
+          "T-24h",
+          "T-12h",
+          "T-6h",
+          "T-3h"
+        ],
+        "alertLevels": [
+          "なし",
+          "注意報",
+          "警報",
+          "特別警報"
+        ],
+        "conditions": {
+          "requireItems": [],
+          "requireFlags": [],
+          "excludeEvacStatus": []
+        }
+      },
+      "weight": 2,
+      "rarity": "common",
+      "scoreDelta": {
+        "生存度": 1,
+        "判断力": 1,
+        "貢献度": 0,
+        "準備度": 0,
+        "文化度": 0
+      },
+      "effects": {
+        "setFlags": [],
+        "addItems": [],
+        "customEffect": null
+      },
+      "feedback": "声をかけましたが、自分の避難を優先しました。",
+      "stamina": -5
+    },
+    {
+      "id": "evac_turn4_004",
+      "category": "待機・時間調整系",
+      "text": "状況を見守る",
+      "evacuationTurn": 4,
+      "availableScenes": [
+        "evacuation"
+      ],
+      "availableWhen": {
+        "phases": [
+          "T-24h",
+          "T-12h",
+          "T-6h",
+          "T-3h"
+        ],
+        "alertLevels": [
+          "なし",
+          "注意報",
+          "警報",
+          "特別警報"
+        ],
+        "conditions": {
+          "requireItems": [],
+          "requireFlags": [],
+          "excludeEvacStatus": []
+        }
+      },
+      "weight": 1.5,
+      "rarity": "common",
+      "scoreDelta": {
+        "生存度": 0,
+        "判断力": 1,
+        "貢献度": 0,
+        "準備度": 0,
+        "文化度": 0
+      },
+      "effects": {
+        "setFlags": [],
+        "addItems": [],
+        "customEffect": null
+      },
+      "feedback": "状況を見守りながら、慎重に進みました。",
+      "stamina": 0
+    },
+    {
+      "id": "evac_turn5_help",
+      "category": "コミュニケーション系",
+      "text": "避難所の運営を手伝う",
+      "evacuationTurn": 5,
+      "requiresHighStamina": true,
+      "availableScenes": [
+        "evacuation"
+      ],
+      "availableWhen": {
+        "phases": [
+          "T-24h",
+          "T-12h",
+          "T-6h",
+          "T-3h"
+        ],
+        "alertLevels": [
+          "なし",
+          "注意報",
+          "警報",
+          "特別警報"
+        ],
+        "conditions": {
+          "requireItems": [],
+          "requireFlags": [],
+          "excludeEvacStatus": []
+        }
+      },
+      "weight": 2,
+      "rarity": "common",
+      "scoreDelta": {
+        "生存度": 0,
+        "判断力": 1,
+        "貢献度": 3,
+        "準備度": 0,
+        "文化度": 1
+      },
+      "effects": {
+        "setFlags": [
+          "運営協力済み"
+        ],
+        "addItems": [],
+        "customEffect": null
+      },
+      "feedback": "体力に余裕があるので、避難所の運営を手伝うことにしました。",
+      "stamina": -10
+    },
+    {
+      "id": "evac_turn5_rest",
+      "category": "待機・時間調整系",
+      "text": "避難所で休む",
+      "evacuationTurn": 5,
+      "requiresLowStamina": false,
+      "availableScenes": [
+        "evacuation"
+      ],
+      "availableWhen": {
+        "phases": [
+          "T-24h",
+          "T-12h",
+          "T-6h",
+          "T-3h"
+        ],
+        "alertLevels": [
+          "なし",
+          "注意報",
+          "警報",
+          "特別警報"
+        ],
+        "conditions": {
+          "requireItems": [],
+          "requireFlags": [],
+          "excludeEvacStatus": []
+        }
+      },
+      "weight": 2,
+      "rarity": "common",
+      "scoreDelta": {
+        "生存度": 2,
+        "判断力": 0,
+        "貢献度": 0,
+        "準備度": 0,
+        "文化度": 0
+      },
+      "effects": {
+        "setFlags": [],
+        "addItems": [],
+        "customEffect": null
+      },
+      "feedback": "避難所に到着し、まずは休息を取ることにしました。",
+      "stamina": 10
+    },
+    {
+      "id": "shelter_help_001",
+      "category": "コミュニケーション系",
+      "text": "避難所の受付を手伝う",
+      "shelterBranch": "help_operations",
+      "availableScenes": [
+        "shelter"
+      ],
+      "availableWhen": {
+        "phases": [
+          "T-24h",
+          "T-12h",
+          "T-6h",
+          "T-3h"
+        ],
+        "alertLevels": [
+          "なし",
+          "注意報",
+          "警報",
+          "特別警報"
+        ],
+        "conditions": {
+          "requireItems": [],
+          "requireFlags": [
+            "運営協力済み"
+          ],
+          "excludeEvacStatus": []
+        }
+      },
+      "weight": 2,
+      "rarity": "common",
+      "scoreDelta": {
+        "生存度": 0,
+        "判断力": 1,
+        "貢献度": 3,
+        "準備度": 0,
+        "文化度": 1
+      },
+      "effects": {
+        "setFlags": [],
+        "addItems": [],
+        "customEffect": null
+      },
+      "feedback": "避難所の受付を手伝い、多くの人をサポートしました。",
+      "stamina": -8
+    },
+    {
+      "id": "shelter_help_002",
+      "category": "物資準備系",
+      "text": "配給物資を配る",
+      "shelterBranch": "help_operations",
+      "availableScenes": [
+        "shelter"
+      ],
+      "availableWhen": {
+        "phases": [
+          "T-24h",
+          "T-12h",
+          "T-6h",
+          "T-3h"
+        ],
+        "alertLevels": [
+          "なし",
+          "注意報",
+          "警報",
+          "特別警報"
+        ],
+        "conditions": {
+          "requireItems": [],
+          "requireFlags": [
+            "運営協力済み"
+          ],
+          "excludeEvacStatus": []
+        }
+      },
+      "weight": 2,
+      "rarity": "common",
+      "scoreDelta": {
+        "生存度": 0,
+        "判断力": 0,
+        "貢献度": 3,
+        "準備度": 0,
+        "文化度": 0
+      },
+      "effects": {
+        "setFlags": [],
+        "addItems": [],
+        "customEffect": null
+      },
+      "feedback": "配給物資を配り、避難者の生活をサポートしました。",
+      "stamina": -10
+    },
+    {
+      "id": "shelter_help_003",
+      "category": "コミュニケーション系",
+      "text": "高齢者や子供の世話をする",
+      "shelterBranch": "help_operations",
+      "availableScenes": [
+        "shelter"
+      ],
+      "availableWhen": {
+        "phases": [
+          "T-24h",
+          "T-12h",
+          "T-6h",
+          "T-3h"
+        ],
+        "alertLevels": [
+          "なし",
+          "注意報",
+          "警報",
+          "特別警報"
+        ],
+        "conditions": {
+          "requireItems": [],
+          "requireFlags": [
+            "運営協力済み"
+          ],
+          "excludeEvacStatus": []
+        }
+      },
+      "weight": 2,
+      "rarity": "common",
+      "scoreDelta": {
+        "生存度": 0,
+        "判断力": 0,
+        "貢献度": 2,
+        "準備度": 0,
+        "文化度": 2
+      },
+      "effects": {
+        "setFlags": [],
+        "addItems": [],
+        "customEffect": null
+      },
+      "feedback": "高齢者や子供の世話をし、彼らを安心させました。",
+      "stamina": -6
+    },
+    {
+      "id": "shelter_help_004",
+      "category": "情報系",
+      "text": "避難者の情報を整理する",
+      "shelterBranch": "help_operations",
+      "availableScenes": [
+        "shelter"
+      ],
+      "availableWhen": {
+        "phases": [
+          "T-24h",
+          "T-12h",
+          "T-6h",
+          "T-3h"
+        ],
+        "alertLevels": [
+          "なし",
+          "注意報",
+          "警報",
+          "特別警報"
+        ],
+        "conditions": {
+          "requireItems": [],
+          "requireFlags": [
+            "運営協力済み"
+          ],
+          "excludeEvacStatus": []
+        }
+      },
+      "weight": 2,
+      "rarity": "common",
+      "scoreDelta": {
+        "生存度": 0,
+        "判断力": 2,
+        "貢献度": 2,
+        "準備度": 0,
+        "文化度": 0
+      },
+      "effects": {
+        "setFlags": [],
+        "addItems": [],
+        "customEffect": null
+      },
+      "feedback": "避難者の情報を整理し、運営の効率化に貢献しました。",
+      "stamina": -5
+    },
+    {
+      "id": "shelter_rest_001",
+      "category": "待機・時間調整系",
+      "text": "静かな場所で休息する",
+      "shelterBranch": "rest",
+      "availableScenes": [
+        "shelter"
+      ],
+      "availableWhen": {
+        "phases": [
+          "T-24h",
+          "T-12h",
+          "T-6h",
+          "T-3h"
+        ],
+        "alertLevels": [
+          "なし",
+          "注意報",
+          "警報",
+          "特別警報"
+        ],
+        "conditions": {
+          "requireItems": [],
+          "requireFlags": [],
+          "excludeEvacStatus": []
+        }
+      },
+      "weight": 2,
+      "rarity": "common",
+      "scoreDelta": {
+        "生存度": 2,
+        "判断力": 0,
+        "貢献度": 0,
+        "準備度": 0,
+        "文化度": 0
+      },
+      "effects": {
+        "setFlags": [],
+        "addItems": [],
+        "customEffect": null
+      },
+      "feedback": "静かな場所で休息し、体力を回復しました。",
+      "stamina": 15
+    },
+    {
+      "id": "shelter_rest_002",
+      "category": "情報系",
+      "text": "周囲の避難者と情報交換する",
+      "shelterBranch": "rest",
+      "availableScenes": [
+        "shelter"
+      ],
+      "availableWhen": {
+        "phases": [
+          "T-24h",
+          "T-12h",
+          "T-6h",
+          "T-3h"
+        ],
+        "alertLevels": [
+          "なし",
+          "注意報",
+          "警報",
+          "特別警報"
+        ],
+        "conditions": {
+          "requireItems": [],
+          "requireFlags": [],
+          "excludeEvacStatus": []
+        }
+      },
+      "weight": 2,
+      "rarity": "common",
+      "scoreDelta": {
+        "生存度": 0,
+        "判断力": 1,
+        "貢献度": 1,
+        "準備度": 0,
+        "文化度": 1
+      },
+      "effects": {
+        "setFlags": [],
+        "addItems": [],
+        "customEffect": null
+      },
+      "feedback": "周囲の避難者と情報交換し、最新情報を共有しました。",
+      "stamina": 0
+    },
+    {
+      "id": "shelter_rest_003",
+      "category": "待機・時間調整系",
+      "text": "軽い体操をする",
+      "shelterBranch": "rest",
+      "availableScenes": [
+        "shelter"
+      ],
+      "availableWhen": {
+        "phases": [
+          "T-24h",
+          "T-12h",
+          "T-6h",
+          "T-3h"
+        ],
+        "alertLevels": [
+          "なし",
+          "注意報",
+          "警報",
+          "特別警報"
+        ],
+        "conditions": {
+          "requireItems": [],
+          "requireFlags": [],
+          "excludeEvacStatus": []
+        }
+      },
+      "weight": 2,
+      "rarity": "common",
+      "scoreDelta": {
+        "生存度": 1,
+        "判断力": 0,
+        "貢献度": 0,
+        "準備度": 0,
+        "文化度": 0
+      },
+      "effects": {
+        "setFlags": [],
+        "addItems": [],
+        "customEffect": null
+      },
+      "feedback": "軽い体操をして体をほぐしました。",
+      "stamina": 10
+    },
+    {
+      "id": "shelter_rest_004",
+      "category": "コミュニケーション系",
+      "text": "家族と今後の計画を話す",
+      "shelterBranch": "rest",
+      "availableScenes": [
+        "shelter"
+      ],
+      "availableWhen": {
+        "phases": [
+          "T-24h",
+          "T-12h",
+          "T-6h",
+          "T-3h"
+        ],
+        "alertLevels": [
+          "なし",
+          "注意報",
+          "警報",
+          "特別警報"
+        ],
+        "conditions": {
+          "requireItems": [],
+          "requireFlags": [],
+          "excludeEvacStatus": []
+        }
+      },
+      "weight": 2,
+      "rarity": "common",
+      "scoreDelta": {
+        "生存度": 0,
+        "判断力": 1,
+        "貢献度": 0,
+        "準備度": 1,
+        "文化度": 1
+      },
+      "effects": {
+        "setFlags": [],
+        "addItems": [],
+        "customEffect": null
+      },
+      "feedback": "家族と今後の計画を話し合い、安心感を得ました。",
+      "stamina": 5
     }
   ]
 }
