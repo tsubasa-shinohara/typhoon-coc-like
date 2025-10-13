@@ -550,6 +550,16 @@ export default function App() {
                             【{phaseInfo.alertLevel}】
                         </span>
                     )}
+                    {phaseInfo.alertText && (
+                        <div style={{ marginTop: 6, fontSize: 12, color: '#d32f2f' }}>
+                            {phaseInfo.alertText}
+                        </div>
+                    )}
+                    {phaseInfo.evacuationOrder && (
+                        <div style={{ marginTop: 6 }}>
+                            <Badge color="red">{phaseInfo.evacuationOrder}</Badge>
+                        </div>
+                    )}
                 </div>
             )}
 

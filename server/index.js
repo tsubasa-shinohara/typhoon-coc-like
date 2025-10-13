@@ -37,9 +37,36 @@ const PHASES = [
   { id: "T-24h", name: "予想到達24時間前", turnsInPhase: 3, baseAlertLevel: "なし" },
   { id: "T-12h", name: "予想到達12時間前", turnsInPhase: 3, alertOptions: ["なし", "注意報"] },
   { id: "T-6h", name: "予想到達6時間前", turnsInPhase: 3, alertOptions: ["なし", "注意報", "警報"] },
-  { id: "T-3h", name: "予想到達3時間前", turnsInPhase: 3, alertOptions: ["なし", "注意報", "警報", "特別警報"] },
+  { id: "T-3h", name: "予想到達3時間前", turnsInPhase: 3, alertOptions: ["なし", "注意報", "警報", "土砂災害警戒", "特別警報"] },
   { id: "T+6h", name: "通過後6時間経過", turnsInPhase: 3, baseAlertLevel: "なし" }
 ];
+
+function getAlertLevelDetails(alertLevel) {
+  const details = {
+    'なし': {
+      text: null,
+      evacuationOrder: null
+    },
+    '注意報': {
+      text: '大雨注意報/洪水注意報/高潮注意報',
+      evacuationOrder: null
+    },
+    '警報': {
+      text: '大雨警報/洪水警報/高潮注意報',
+      evacuationOrder: '高齢者等避難'
+    },
+    '土砂災害警戒': {
+      text: Math.random() < 0.5 ? '土砂災害警戒情報/高潮警報' : '土砂災害警戒情報/高潮特別警報',
+      evacuationOrder: '避難指示'
+    },
+    '特別警報': {
+      text: '大雨特別警報',
+      evacuationOrder: '緊急安全確保'
+    }
+  };
+  
+  return details[alertLevel] || details['なし'];
+}
 
 const EVACUATION_TURNS = [
   {
@@ -170,6 +197,19 @@ function applySafetyRules(prev = {}, proposed = {}) {
     console.log(`[applySafetyRules] Skipped init: condition false`);
   }
   console.log(`[applySafetyRules] After init: phaseAlertLevel=${s.phaseAlertLevel}`);
+  
+  if (s.currentScene === 'shelter' && s.turnInPhase === 1) {
+    const levelRank = { "なし": 0, "注意報": 1, "警報": 2, "土砂災害警戒": 3, "特別警報": 4 };
+    const currentRank = levelRank[s.phaseAlertLevel] || 0;
+    
+    if (Math.random() < 0.5 && currentRank < 4) {
+      const levels = ["なし", "注意報", "警報", "土砂災害警戒", "特別警報"];
+      s.phaseAlertLevel = levels[currentRank + 1];
+      console.log(`[applySafetyRules] Shelter alert progression: increased to ${s.phaseAlertLevel}`);
+    } else {
+      console.log(`[applySafetyRules] Shelter alert progression: maintained at ${s.phaseAlertLevel}`);
+    }
+  }
   
   // Turn increment moved to endpoint handler to only increment when a choice is selected
   s.turn = s.totalTurns; // 互換性のため
@@ -761,7 +801,7 @@ function applySafetyRules(prev = {}, proposed = {}) {
 }
 
 function selectAlertLevel(prevLevel, options) {
-  const levelRank = { "なし": 0, "注意報": 1, "警報": 2, "特別警報": 3 };
+  const levelRank = { "なし": 0, "注意報": 1, "警報": 2, "土砂災害警戒": 3, "特別警報": 4 };
   const prevRank = levelRank[prevLevel] || 0;
   
   const validOptions = options.filter(opt => {
@@ -793,6 +833,7 @@ function getStaminaMultiplier(alertLevel, isRecovery) {
     'なし': { decrease: 1.0, recovery: 1.0 },
     '注意報': { decrease: 1.1, recovery: 0.9 },
     '警報': { decrease: 1.3, recovery: 0.7 },
+    '土砂災害警戒': { decrease: 1.4, recovery: 0.6 },
     '特別警報': { decrease: 1.5, recovery: 0.5 }
   };
   
@@ -936,6 +977,42 @@ function selectChoicesByTurn(availableChoices, turnInPhase, state) {
     return turnChoices.slice(0, 4);
   }
   
+  if (state.currentScene === 'shelter') {
+    const isHelpPath = (state.flags || []).includes('運営協力済み');
+    
+    if (isHelpPath) {
+      if (turnInPhase === 1) {
+        return [
+          { id: 'shelter_help_p1_1', text: '避難所全体を把握する', category: '避難所運営系', stamina: -10, scoreDelta: { 生存度: 1, 判断力: 2, 貢献度: 3, 準備度: 0, 文化度: 0 } },
+          { id: 'shelter_help_p1_2', text: '名簿を作る', category: '避難所運営系', stamina: -8, scoreDelta: { 生存度: 0, 判断力: 1, 貢献度: 2, 準備度: 1, 文化度: 0 } },
+          { id: 'shelter_help_p1_3', text: '受付を設置する', category: '避難所運営系', stamina: -12, scoreDelta: { 生存度: 1, 判断力: 1, 貢献度: 3, 準備度: 0, 文化度: 1 } }
+        ];
+      } else if (turnInPhase === 2) {
+        const scenario = Math.random() < 0.5 ? 'sewage' : 'infectious';
+        
+        if (scenario === 'sewage') {
+          return [
+            { id: 'shelter_help_p2_sewage_1', text: 'トイレを封鎖する', category: '避難所運営系', stamina: -15, scoreDelta: { 生存度: 2, 判断力: 1, 貢献度: 2, 準備度: 0, 文化度: 0 } },
+            { id: 'shelter_help_p2_sewage_2', text: '仮設トイレを準備する', category: '避難所運営系', stamina: -20, scoreDelta: { 生存度: 1, 判断力: 2, 貢献度: 4, 準備度: 0, 文化度: 0 } },
+            { id: 'shelter_help_p2_sewage_3', text: '仮設トイレの設置場所を考える', category: '避難所運営系', stamina: -10, scoreDelta: { 生存度: 0, 判断力: 3, 貢献度: 2, 準備度: 0, 文化度: 0 } }
+          ];
+        } else {
+          return [
+            { id: 'shelter_help_p2_infectious_1', text: 'パーテーションを設置する', category: '避難所運営系', stamina: -18, scoreDelta: { 生存度: 3, 判断力: 1, 貢献度: 3, 準備度: 0, 文化度: 0 } },
+            { id: 'shelter_help_p2_infectious_2', text: '感染症の疑いがある避難者を空き教室に誘導する', category: '避難所運営系', stamina: -12, scoreDelta: { 生存度: 2, 判断力: 2, 貢献度: 2, 準備度: 0, 文化度: 1 } },
+            { id: 'shelter_help_p2_infectious_3', text: '受付に体温計と消毒スプレーを用意する', category: '避難所運営系', stamina: -10, scoreDelta: { 生存度: 2, 判断力: 1, 貢献度: 2, 準備度: 1, 文化度: 0 } }
+          ];
+        }
+      }
+    } else {
+      return [
+        { id: 'shelter_rest_1', text: '水を飲む', category: '避難所休息系', stamina: 10, scoreDelta: { 生存度: 1, 判断力: 0, 貢献度: 0, 準備度: 0, 文化度: 0 } },
+        { id: 'shelter_rest_2', text: '周りと話す', category: '避難所休息系', stamina: 5, scoreDelta: { 生存度: 0, 判断力: 0, 貢献度: 1, 準備度: 0, 文化度: 2 } },
+        { id: 'shelter_rest_3', text: 'その場で休む', category: '避難所休息系', stamina: 15, scoreDelta: { 生存度: 1, 判断力: 0, 貢献度: 0, 準備度: 0, 文化度: 0 } }
+      ];
+    }
+  }
+  
   const currentPhase = PHASES[state.currentPhase];
   if (currentPhase && currentPhase.id === 'T+6h') {
     return [];
@@ -970,12 +1047,6 @@ function selectChoicesByTurn(availableChoices, turnInPhase, state) {
     }
   }
   
-  const hasWarnings = 
-    (state.jma?.advisories?.length > 0) ||
-    (state.jma?.warnings?.length > 0) ||
-    (state.jma?.special?.length > 0) ||
-    (state.evacuationInfo && state.evacuationInfo !== 'なし');
-  
   if (state.awaitingEvacuationMethod) {
     return [
       {
@@ -995,7 +1066,7 @@ function selectChoicesByTurn(availableChoices, turnInPhase, state) {
     ];
   }
   
-  if (state.currentScene === 'home' && hasWarnings && !state.awaitingEvacuationMethod) {
+  if (state.currentScene === 'home' && state.phaseAlertLevel && state.phaseAlertLevel !== 'なし' && !state.awaitingEvacuationMethod) {
     selected.push({
       id: 'meta_evacuate',
       text: '避難する',
@@ -1516,10 +1587,13 @@ JSON形式で返してください:
       finalReport = await buildFinalReport(next, client);
     }
     
+    const alertDetails = getAlertLevelDetails(next.phaseAlertLevel || 'なし');
     const phaseInfo = {
       phaseName: PHASES[next.currentPhase]?.name || '終了',
       phaseId: PHASES[next.currentPhase]?.id || 'ended',
       alertLevel: next.phaseAlertLevel || 'なし',
+      alertText: alertDetails.text,
+      evacuationOrder: alertDetails.evacuationOrder,
       turnInPhase: next.turnInPhase,
       totalTurns: next.totalTurns
     };
