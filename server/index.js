@@ -222,14 +222,14 @@ function applySafetyRules(prev = {}, proposed = {}) {
   
   // Initialize phase alert level from PHASES configuration
   console.log(`[applySafetyRules] Before init: currentPhase=${s.currentPhase}, turnInPhase=${s.turnInPhase}, phaseAlertLevel=${s.phaseAlertLevel}`);
-  if (!s.phaseAlertLevel || (s.currentPhase === 0 && s.turnInPhase <= 1)) {
+  if (!s.phaseAlertLevel || s.turnInPhase === 1) {
     const currentPhase = PHASES[s.currentPhase] || PHASES[0];
     console.log(`[applySafetyRules] Initializing phaseAlertLevel from PHASES[${s.currentPhase}]`, currentPhase);
     if (currentPhase.baseAlertLevel) {
       s.phaseAlertLevel = currentPhase.baseAlertLevel;
       console.log(`[applySafetyRules] Set phaseAlertLevel to baseAlertLevel: ${s.phaseAlertLevel}`);
     } else if (currentPhase.alertOptions) {
-      s.phaseAlertLevel = selectAlertLevel("なし", currentPhase.alertOptions);
+      s.phaseAlertLevel = selectAlertLevel(s.phaseAlertLevel || "なし", currentPhase.alertOptions);
       console.log(`[applySafetyRules] Set phaseAlertLevel via selectAlertLevel: ${s.phaseAlertLevel}`);
     } else {
       s.phaseAlertLevel = "なし";
