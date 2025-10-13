@@ -112,6 +112,26 @@ function applySafetyRules(prev = {}, proposed = {}) {
   if (!s.maxStamina) s.maxStamina = 100;
   if (!s.staminaPenaltyActive) s.staminaPenaltyActive = false;
   
+  // Initialize phase alert level from PHASES configuration
+  console.log(`[applySafetyRules] Before init: currentPhase=${s.currentPhase}, turnInPhase=${s.turnInPhase}, phaseAlertLevel=${s.phaseAlertLevel}`);
+  if (!s.phaseAlertLevel || (s.currentPhase === 0 && s.turnInPhase <= 1)) {
+    const currentPhase = PHASES[s.currentPhase] || PHASES[0];
+    console.log(`[applySafetyRules] Initializing phaseAlertLevel from PHASES[${s.currentPhase}]`, currentPhase);
+    if (currentPhase.baseAlertLevel) {
+      s.phaseAlertLevel = currentPhase.baseAlertLevel;
+      console.log(`[applySafetyRules] Set phaseAlertLevel to baseAlertLevel: ${s.phaseAlertLevel}`);
+    } else if (currentPhase.alertOptions) {
+      s.phaseAlertLevel = selectAlertLevel("なし", currentPhase.alertOptions);
+      console.log(`[applySafetyRules] Set phaseAlertLevel via selectAlertLevel: ${s.phaseAlertLevel}`);
+    } else {
+      s.phaseAlertLevel = "なし";
+      console.log(`[applySafetyRules] Set phaseAlertLevel to default: なし`);
+    }
+  } else {
+    console.log(`[applySafetyRules] Skipped init: condition false`);
+  }
+  console.log(`[applySafetyRules] After init: phaseAlertLevel=${s.phaseAlertLevel}`);
+  
   // Turn increment moved to endpoint handler to only increment when a choice is selected
   s.turn = s.totalTurns; // 互換性のため
   
@@ -1199,6 +1219,17 @@ app.post('/api/facilitator', async (req, res) => {
           next.currentStamina = 30;
           next.turnInPhase = 0;
           next.phaseData.turn1Categories = [];
+          
+          // Set phase alert level from PHASES configuration
+          const newPhase = PHASES[next.currentPhase];
+          if (newPhase) {
+            if (newPhase.baseAlertLevel) {
+              next.phaseAlertLevel = newPhase.baseAlertLevel;
+            } else if (newPhase.alertOptions) {
+              const prevAlertLevel = next.phaseAlertLevel || "なし";
+              next.phaseAlertLevel = selectAlertLevel(prevAlertLevel, newPhase.alertOptions);
+            }
+          }
         }
       }
       
@@ -1209,6 +1240,17 @@ app.post('/api/facilitator', async (req, res) => {
           next.currentPhase++;
           next.turnInPhase = 1;
           next.phaseData.turn1Categories = [];
+          
+          // Set phase alert level from PHASES configuration
+          const newPhase = PHASES[next.currentPhase];
+          if (newPhase) {
+            if (newPhase.baseAlertLevel) {
+              next.phaseAlertLevel = newPhase.baseAlertLevel;
+            } else if (newPhase.alertOptions) {
+              const prevAlertLevel = next.phaseAlertLevel || "なし";
+              next.phaseAlertLevel = selectAlertLevel(prevAlertLevel, newPhase.alertOptions);
+            }
+          }
         } else {
           next.turnInPhase++;
         }
@@ -1220,6 +1262,17 @@ app.post('/api/facilitator', async (req, res) => {
           next.currentPhase++;
           next.turnInPhase = 1;
           next.phaseData.turn1Categories = [];
+          
+          // Set phase alert level from PHASES configuration
+          const newPhase = PHASES[next.currentPhase];
+          if (newPhase) {
+            if (newPhase.baseAlertLevel) {
+              next.phaseAlertLevel = newPhase.baseAlertLevel;
+            } else if (newPhase.alertOptions) {
+              const prevAlertLevel = next.phaseAlertLevel || "なし";
+              next.phaseAlertLevel = selectAlertLevel(prevAlertLevel, newPhase.alertOptions);
+            }
+          }
           
           if (next.familyLocations) {
             next.familyLocations = next.familyLocations.map(x => {
