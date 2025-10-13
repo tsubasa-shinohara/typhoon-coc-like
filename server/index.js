@@ -1488,9 +1488,9 @@ JSON形式で返してください:
     const phaseInfo = {
       phaseName: PHASES[next.currentPhase]?.name || '終了',
       phaseId: PHASES[next.currentPhase]?.id || 'ended',
+      alertLevel: next.phaseAlertLevel || 'なし',
       turnInPhase: next.turnInPhase,
-      totalTurns: next.totalTurns,
-      alertLevel: next.phaseAlertLevel
+      totalTurns: next.totalTurns
     };
 
     res.json({ 
