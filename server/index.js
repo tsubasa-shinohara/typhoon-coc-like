@@ -948,6 +948,28 @@ function selectChoicesByTurn(availableChoices, turnInPhase, state) {
   const selected = [];
   const usedCategories = new Set();
   
+  // Check if any family members are away from home
+  const familyMembersAway = (state.familyLocations || []).filter(
+    member => member.location !== 'home'
+  );
+  
+  // Prioritize family safety choices if family members are away
+  if (familyMembersAway.length > 0) {
+    const familySafetyChoices = unselectedChoices.filter(c => 
+      c.id.includes('family') || 
+      c.text.includes('家族') || 
+      c.text.includes('安否')
+    );
+    
+    if (familySafetyChoices.length > 0) {
+      const priorityChoice = weightedRandomChoice(familySafetyChoices);
+      if (priorityChoice) {
+        selected.push(priorityChoice);
+        usedCategories.add(priorityChoice.category);
+      }
+    }
+  }
+  
   const hasWarnings = 
     (state.jma?.advisories?.length > 0) ||
     (state.jma?.warnings?.length > 0) ||
@@ -984,15 +1006,6 @@ function selectChoicesByTurn(availableChoices, turnInPhase, state) {
     });
   }
   
-  if (unselectedChoices.length === 0 && selected.length === 0) {
-    return [
-      { id: 'fallback_1', text: '現状を確認する', category: '情報系', stamina: -5 },
-      { id: 'fallback_2', text: '家族と話し合う', category: 'コミュニケーション系', stamina: -3 },
-      { id: 'fallback_3', text: '様子を見る', category: '待機・時間調整系', stamina: 5 },
-      { id: 'fallback_4', text: '情報を収集する', category: '情報系', stamina: -5 }
-    ];
-  }
-  
   const triggeredChoices = unselectedChoices.filter(choice => {
     const requiredFlags = choice.availableWhen?.conditions?.requireFlags || [];
     if (requiredFlags.length === 0) return false;
@@ -1015,6 +1028,14 @@ function selectChoicesByTurn(availableChoices, turnInPhase, state) {
           usedCategories.add(category);
         }
       }
+    }
+    
+    // If we still have fewer than 4 choices, try any available category
+    while (selected.length < 4) {
+      const anyChoice = unselectedChoices.find(c => !selected.find(s => s.id === c.id));
+      if (!anyChoice) break;
+      selected.push(anyChoice);
+      usedCategories.add(anyChoice.category);
     }
   } else if (turnInPhase === 2) {
     const turn1Cats = state.phaseData?.turn1Categories || [];
@@ -1052,7 +1073,7 @@ function selectChoicesByTurn(availableChoices, turnInPhase, state) {
     }
     
     // Fill remaining slots, ensuring no category duplication
-    while (selected.length < 4 && selected.length < unselectedChoices.length) {
+    while (selected.length < 4) {
       const activeChoices = unselectedChoices.filter(c => 
         ACTIVE_CATEGORIES.includes(c.category) && 
         !selected.find(s => s.id === c.id) &&
@@ -1086,7 +1107,7 @@ function selectChoicesByTurn(availableChoices, turnInPhase, state) {
     }
     
     // Fill remaining slots, ensuring no category duplication
-    while (selected.length < 4 && selected.length < unselectedChoices.length) {
+    while (selected.length < 4) {
       const activeChoices = unselectedChoices.filter(c => 
         ACTIVE_CATEGORIES.includes(c.category) && 
         !selected.find(s => s.id === c.id) &&
@@ -1099,6 +1120,16 @@ function selectChoicesByTurn(availableChoices, turnInPhase, state) {
         usedCategories.add(choice.category);
       }
     }
+  }
+  
+  // Ensure at least some choices are always available (improved fallback)
+  if (selected.length === 0) {
+    return [
+      { id: 'fallback_1', text: '現状を確認する', category: '情報系', stamina: -5, scoreDelta: { 生存度: 1, 判断力: 1, 貢献度: 0, 準備度: 0, 文化度: 0 } },
+      { id: 'fallback_2', text: '家族と話し合う', category: 'コミュニケーション系', stamina: -3, scoreDelta: { 生存度: 0, 判断力: 1, 貢献度: 1, 準備度: 0, 文化度: 1 } },
+      { id: 'fallback_3', text: '様子を見る', category: '待機・時間調整系', stamina: 5, scoreDelta: { 生存度: 0, 判断力: 0, 貢献度: 0, 準備度: 0, 文化度: 0 } },
+      { id: 'fallback_4', text: '情報を収集する', category: '情報系', stamina: -5, scoreDelta: { 生存度: 1, 判断力: 2, 貢献度: 0, 準備度: 1, 文化度: 0 } }
+    ];
   }
   
   return selected;
