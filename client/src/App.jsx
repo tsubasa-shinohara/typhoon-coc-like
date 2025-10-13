@@ -532,7 +532,7 @@ export default function App() {
             </div>
 
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 10 }}>
-                {jmaBadges}
+                {phaseInfo?.alertLevel && phaseInfo.alertLevel !== 'なし' && jmaBadges}
                 {riverBadge}
                 {evacInfoBadge}
                 {state.landslide?.precursors?.length > 0 && (
