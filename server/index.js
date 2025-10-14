@@ -1519,7 +1519,7 @@ app.post('/api/facilitator', async (req, res) => {
         next.turnInPhase = (next.turnInPhase || 0) + 1;
         next.turn = next.totalTurns;
         
-        if (next.turnInPhase > PHASES[next.currentPhase].turnsInPhase) {
+        if (next.turnInPhase > PHASES[next.currentPhase].turnsInPhase && !next.awaitingEvacuationMethod) {
           next.currentPhase++;
           next.turnInPhase = 1;
           next.phaseData.turn1Categories = [];
