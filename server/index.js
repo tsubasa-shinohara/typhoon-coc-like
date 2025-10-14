@@ -444,6 +444,7 @@ function applySafetyRules(prev = {}, proposed = {}) {
     s.evacuationStartPhase = s.currentPhase;
     s.evacuationTurnsElapsed = 0;
     s.evacuationSkippedTurns = null;
+    s.turnInPhase = 0;
     s.awaitingEvacuationMethod = false;
     
     if (lastChoiceId === 'evacuate_by_car') {

@@ -422,6 +422,17 @@ export default function App() {
             体力: {state.currentStamina}/{state.maxStamina}
         </Badge>
     );
+    const getTurnDisplay = () => {
+        if (state.currentScene === 'evacuation') {
+            const elapsed = state.evacuationTurnsElapsed || 0;
+            const required = state.evacuationRequiredTurns || 5;
+            return `${elapsed}/${required}ターン`;
+        }
+        return `${phaseInfo.turnInPhase}/3ターン`;
+    };
+    const turnDisplay = phaseInfo ? getTurnDisplay() : '';
+
+
 
     // ⑥ 結果画面
     if (state.phase === 'ended' && state.finalReport) {
@@ -518,7 +529,7 @@ export default function App() {
 
             {/* ステータス行 */}
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 10 }}>
-                {phaseInfo && <Badge color="blue">{phaseInfo.phaseName}（{phaseInfo.turnInPhase}/3ターン）</Badge>}
+                {phaseInfo && <Badge color="blue">{phaseInfo.phaseName}（{turnDisplay}）</Badge>}
                 {sceneBadge}
                 {staminaBadge}
                 {powerBadge}
@@ -544,7 +555,7 @@ export default function App() {
             {/* フェーズ情報 */}
             {phaseInfo && (
                 <div style={{ padding: 10, border: '2px solid #4A90E2', borderRadius: 8, background: '#E3F2FD', marginBottom: 10, fontSize: 14 }}>
-                    <strong>{phaseInfo.phaseName}（{phaseInfo.turnInPhase}/3ターン）</strong>
+                    <strong>{phaseInfo.phaseName}（{turnDisplay}）</strong>
                     {phaseInfo.alertLevel && phaseInfo.alertLevel !== 'なし' && (
                         <span style={{ marginLeft: 10, color: '#d32f2f' }}>
                             【{phaseInfo.alertLevel}】
