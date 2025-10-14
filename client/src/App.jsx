@@ -426,7 +426,7 @@ export default function App() {
         if (state.currentScene === 'evacuation') {
             const elapsed = state.evacuationTurnsElapsed || 0;
             const required = state.evacuationRequiredTurns || 5;
-            return `${elapsed}/${required}ターン`;
+            return `${elapsed + 1}/${required}ターン`;
         }
         if (state.currentScene === 'shelter') {
             return `1/1ターン`;
