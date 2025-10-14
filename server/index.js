@@ -489,6 +489,7 @@ function applySafetyRules(prev = {}, proposed = {}) {
     
     if (s.evacuationTurnsElapsed >= requiredTurns) {
       s.currentScene = 'shelter';
+      s.turnInPhase = 0;
       s.evac.status = 'arrived';
       s.familyLocations = (s.familyLocations || []).map(x => ({
         ...x,
