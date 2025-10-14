@@ -192,7 +192,7 @@ function generateInitialScenario() {
 
   const hasElderly = members.some(m => m.role === 'elder');
   const hasInfant = members.some(m => m.role === 'infant');
-  const carAvailable = Math.random() < 0.6;
+  const carAvailable = true;
 
   const shelter = choice(['第一小学校 体育館', '市民センター', '地区防災広場']);
 
@@ -451,7 +451,10 @@ function applySafetyRules(prev = {}, proposed = {}) {
   }
   
   if (s.currentScene === 'evacuation' && s.evac?.status === 'en_route') {
-    s.evacuationTurnsElapsed = (s.evacuationTurnsElapsed || 0) + 1;
+    const isInitializationTurn = lastChoiceId === 'evacuate_by_car' || lastChoiceId === 'evacuate_on_foot';
+    if (!isInitializationTurn) {
+      s.evacuationTurnsElapsed = (s.evacuationTurnsElapsed || 0) + 1;
+    }
     
     let requiredTurns = 5;
     
@@ -467,7 +470,7 @@ function applySafetyRules(prev = {}, proposed = {}) {
     
     if (s.evacuationTurnsElapsed >= requiredTurns) {
       s.currentScene = 'shelter';
-      s.turnInPhase = 0;
+      s.turnInPhase = 1;
       s.evac.status = 'arrived';
       s.familyLocations = (s.familyLocations || []).map(x => ({
         ...x,
