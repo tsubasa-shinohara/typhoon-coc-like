@@ -1147,6 +1147,8 @@ function selectChoicesByTurn(availableChoices, turnInPhase, state) {
     state.phaseData.turn1Categories = selectedCategories;
     
     for (const category of selectedCategories) {
+      if (selected.length >= 4) break;
+      
       const categoryChoices = unselectedChoices.filter(c => c.category === category);
       if (categoryChoices.length > 0) {
         const choice = weightedRandomChoice(categoryChoices);
@@ -1538,6 +1540,21 @@ app.post('/api/facilitator', async (req, res) => {
             });
           }
         }
+      }
+      
+      if (next.currentPhase >= 4 && !next.gameEnded) {
+        next.gameEnded = true;
+        next.phase = 'ended';
+        next.ending = {
+          type: 'typhoon_passed',
+          summary: '台風は通過し、風雨は弱まりました。あなたの判断と行動により家族は安全に過ごせました。',
+          safetyScore: (() => {
+            const total = (next.familyLocations?.length || 1);
+            const safe = (next.familyLocations || []).filter(f => f.location !== 'unknown' && f.location !== 'disaster').length;
+            return Math.round((safe / total) * 100);
+          })(),
+          turnEnded: next.turn,
+        };
       }
       
       if (next.staminaPenaltyActive) {
