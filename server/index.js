@@ -444,6 +444,7 @@ function applySafetyRules(prev = {}, proposed = {}) {
     s.evacuationStartPhase = s.currentPhase;
     s.evacuationTurnsElapsed = 0;
     s.evacuationSkippedTurns = null;
+    s.turnInPhase = 0;
     s.awaitingEvacuationMethod = false;
     
     if (lastChoiceId === 'evacuate_by_car') {
@@ -489,6 +490,7 @@ function applySafetyRules(prev = {}, proposed = {}) {
     
     if (s.evacuationTurnsElapsed >= requiredTurns) {
       s.currentScene = 'shelter';
+      s.turnInPhase = 0;
       s.evac.status = 'arrived';
       s.familyLocations = (s.familyLocations || []).map(x => ({
         ...x,
