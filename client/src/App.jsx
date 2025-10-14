@@ -431,7 +431,7 @@ export default function App() {
         if (state.currentScene === 'shelter') {
             return `1/1ターン`;
         }
-        return `${phaseInfo.turnInPhase}/3ターン`;
+        return `${Math.min(phaseInfo.turnInPhase, 3)}/3ターン`;
     };
     const turnDisplay = phaseInfo ? getTurnDisplay() : '';
 
