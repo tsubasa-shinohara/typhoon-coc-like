@@ -428,6 +428,9 @@ export default function App() {
             const required = state.evacuationRequiredTurns || 5;
             return `${elapsed}/${required}ターン`;
         }
+        if (state.currentScene === 'shelter') {
+            return `1/1ターン`;
+        }
         return `${phaseInfo.turnInPhase}/3ターン`;
     };
     const turnDisplay = phaseInfo ? getTurnDisplay() : '';
