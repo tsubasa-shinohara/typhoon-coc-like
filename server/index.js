@@ -405,24 +405,6 @@ function applySafetyRules(prev = {}, proposed = {}) {
     }
   }
 
-  if (s.evac.status === 'en_route' && !s.evacuationSkippedTurns) {
-    const skippedTurns = [];
-    
-    for (const turn of EVACUATION_TURNS) {
-      if (turn.canBeSkipped && turn.skipFlag && (s.flags || []).includes(turn.skipFlag)) {
-        skippedTurns.push({
-          turnId: turn.id,
-          turnName: turn.name,
-          reason: turn.skipReason
-        });
-      }
-    }
-    
-    s.evacuationSkippedTurns = skippedTurns;
-    const maxTurns = EVACUATION_TURNS.length - skippedTurns.length;
-    s.evacuationMaxTurns = maxTurns;
-    s.evacuationRequiredTurns = maxTurns;
-  }
 
   if (s.carUse && !s.scenario?.hasElderly && s.evac.status === 'en_route') {
     if (!s.evac.hazards) s.evac.hazards = [];
@@ -473,12 +455,7 @@ function applySafetyRules(prev = {}, proposed = {}) {
     
     let requiredTurns = 5;
     
-    if (s.neighborOutreach || s.flags?.includes('近隣声掛け済み')) {
-      requiredTurns = Math.max(1, requiredTurns - 1);
-    }
-    if (s.routeConfirmed || s.flags?.includes('避難経路確認済み')) {
-      requiredTurns = Math.max(1, requiredTurns - 1);
-    }
+    
     if (s.evac.hasKittenEvent) {
       requiredTurns += 1;
     }
