@@ -470,7 +470,7 @@ function applySafetyRules(prev = {}, proposed = {}) {
     
     if (s.evacuationTurnsElapsed >= requiredTurns) {
       s.currentScene = 'shelter';
-      s.turnInPhase = 1;
+      s.turnInPhase = 0;
       s.evac.status = 'arrived';
       s.familyLocations = (s.familyLocations || []).map(x => ({
         ...x,
@@ -1466,8 +1466,8 @@ app.post('/api/facilitator', async (req, res) => {
       }
       
       if (next.currentScene === 'evacuation') {
-        next.evacuationTurnsElapsed = (next.evacuationTurnsElapsed || 0) + 1;
-        
+        // Turn counting is handled in applySafetyRules function (line 456)
+        // Track final evacuation choice for shelter scene logic
         const currentTurn = getCurrentEvacuationTurn(next);
         if (currentTurn && currentTurn.id === 5 && selectedChoiceId) {
           if (selectedChoiceId === 'evac_turn5_help' || (selectedChoice?.text && selectedChoice.text.includes('運営を手伝う'))) {
@@ -1476,7 +1476,7 @@ app.post('/api/facilitator', async (req, res) => {
             next.evacuationFinalChoice = 'rest';
           }
         }
-      } else if (next.currentScene === 'shelter') {
+      }else if (next.currentScene === 'shelter') {
         if (next.turnInPhase >= 1) {
           next.currentPhase++;
           next.turnInPhase = 1;
